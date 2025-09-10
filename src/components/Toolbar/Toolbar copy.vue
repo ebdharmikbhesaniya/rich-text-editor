@@ -23,31 +23,51 @@
       v-if="hasHistoryTools && hasOtherTools" />
 
     <!-- Heading Tool -->
-    <heading-tool v-if="tools.includes('heading')" />
+    <heading-tool
+      v-if="tools.includes('heading')"
+      @changeHeading="$emit('changeHeading', $event)" />
 
     <span
       class="ck-toolbar__separator"
       v-if="tools.includes('heading') && hasFormattingTools" />
 
     <!-- Text Formatting Tools -->
-    <!-- <text-formatting-tools
+    <text-formatting-tools
       v-if="hasFormattingTools"
-      :tools="tools" /> -->
+      :tools="tools"
+      :activeStates="editorStore.activeStates"
+      @execCommand="$emit('execCommand', $event)" />
 
     <span
       class="ck-toolbar__separator"
       v-if="hasFormattingTools && hasColorTools" />
 
     <!-- Color Tools -->
-    <!-- <color-tool
+    <color-tool
       v-if="hasColorTools"
-      :tools="tools" /> -->
+      :tools="tools"
+      :currentTextColor="editorStore.currentTextColor"
+      :currentHighlightColor="editorStore.currentHighlightColor"
+      @changeTextColor="$emit('changeTextColor', $event)"
+      @applyHighlight="$emit('applyHighlight', $event)" />
 
     <span class="ck-toolbar__separator" v-if="hasColorTools && hasTableTools" />
 
     <!-- Table Tool -->
-    <!-- <table-tool v-if="hasTableTools" /> -->
-
+    Hello
+    <table-tool
+      v-if="hasTableTools"
+      :currentTableHeaderColor="editorStore.currentTableHeaderColor"
+      :isInTableCell="editorStore.isInTableCell"
+      @insertTableRow="$emit('insertTableRow', $event)"
+      @deleteTableRow="$emit('deleteTableRow')"
+      @insertTableColumn="$emit('insertTableColumn', $event)"
+      @deleteTableColumn="$emit('deleteTableColumn')"
+      @changeTableHeaderColor="$emit('changeTableHeaderColor', $event)"
+      @toggleTableHeader="$emit('toggleTableHeader')"
+      @showCustomTableDialog="$emit('showCustomTableDialog')" />
+    Hey
+    <!-- @createTableFromGrid="$emit('createTableFromGrid', $event)" -->
     <span
       class="ck-toolbar__separator"
       v-if="hasTableTools && hasInsertTools" />
@@ -57,33 +77,39 @@
       <tool-button
         v-if="tools.includes('insertLink')"
         title="Insert Link (Ctrl+K)"
-        @execute="editorStore.handleInsertLink()">
+        @execute="$emit('insertLink')">
         <Link />
       </tool-button>
 
       <tool-button
         v-if="tools.includes('insertHorizontalRule')"
         title="Horizontal Rule"
-        @execute="editorStore.handleExecCommand('insertHorizontalRule')">
+        @execute="$emit('execCommand', 'insertHorizontalRule')">
         <Minus />
       </tool-button>
+
+      <!-- TODO: add horishontel rules this one is missing -->
     </div>
 
     <span class="ck-toolbar__separator" v-if="hasInsertTools && hasListTools" />
 
     <!-- List Tools -->
-    <!-- <list-tools
+    <list-tools
       v-if="hasListTools"
-      :tools="tools" /> -->
+      :tools="tools"
+      :activeStates="editorStore.activeStates"
+      @execCommand="$emit('execCommand', $event)" />
 
     <span
       class="ck-toolbar__separator"
       v-if="hasListTools && hasAlignmentTools" />
 
     <!-- Alignment Tools -->
-    <!-- <alignment-tools
+    <alignment-tools
       v-if="hasAlignmentTools"
-      :tools="tools" /> -->
+      :tools="tools"
+      :activeStates="editorStore.activeStates"
+      @execCommand="$emit('execCommand', $event)" />
 
     <span
       class="ck-toolbar__separator"
@@ -94,7 +120,7 @@
       <tool-button
         :isActive="editorStore.isCodeView"
         title="Source Code View"
-        @execute="editorStore.handleToggleCodeView()">
+        @execute="editorStore.handleToggleCodeView">
         <CodeBrackets />
       </tool-button>
     </div>

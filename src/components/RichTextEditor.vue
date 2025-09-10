@@ -49,7 +49,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, watch } from "vue";
+import { onMounted, onUnmounted, ref, watch, nextTick, provide } from "vue";
 import { useEditorStore } from "../stores/editorStore";
 import type { ToolName } from "../types";
 import { isCommandActive } from "../utils/commands";
@@ -79,6 +79,22 @@ editorStore.setEmitFunction(emit);
 const root = ref<HTMLElement>();
 const editorAreaRef = ref<InstanceType<typeof EditorArea>>();
 
+// Provide the editorAreaRef to child components
+provide("editorAreaRef", editorAreaRef);
+
+// Watch for editorAreaRef changes and ensure it's set in store
+watch(
+  editorAreaRef,
+  async (newRef) => {
+    if (newRef) {
+      await nextTick(); // Wait for the ref to be fully mounted
+      editorStore.setEditorAreaRef(newRef);
+      console.log("EditorAreaRef set in store:", newRef.editable);
+    }
+  },
+  { immediate: true, flush: "post" }
+);
+
 // Event Handlers
 const handleInput = () => {
   editorStore.updateContent();
@@ -94,7 +110,7 @@ const handleKeydown = (event: KeyboardEvent) => {
     if (k === "b" || k === "i" || k === "u") {
       event.preventDefault();
       const cmd = k === "b" ? "bold" : k === "i" ? "italic" : "underline";
-      editorStore.handleExecCommand(cmd, undefined);
+      editorStore.handleExecCommand(cmd);
     }
     if (k === "k") {
       event.preventDefault();
@@ -106,7 +122,7 @@ const handleKeydown = (event: KeyboardEvent) => {
     }
     if (k === "=") {
       event.preventDefault();
-      editorStore.handleExecCommand("subscript", undefined);
+      editorStore.handleExecCommand("subscript");
     }
   }
 
@@ -114,7 +130,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   if ((event.ctrlKey || event.metaKey) && event.shiftKey) {
     if (event.key === "=" || event.key === "+") {
       event.preventDefault();
-      editorStore.handleExecCommand("superscript", undefined);
+      editorStore.handleExecCommand("superscript");
     }
   }
 
@@ -122,10 +138,10 @@ const handleKeydown = (event: KeyboardEvent) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
     if (event.shiftKey) {
       event.preventDefault();
-      editorStore.handleExecCommand("redo", undefined);
+      editorStore.handleExecCommand("redo");
     } else {
       event.preventDefault();
-      editorStore.handleExecCommand("undo", undefined);
+      editorStore.handleExecCommand("undo");
     }
   }
 
@@ -253,30 +269,29 @@ watch(
   { immediate: true }
 );
 
-watch(
-  editorAreaRef,
-  (newRef) => {
-    if (newRef) {
-      editorStore.setEditorAreaRef(newRef);
-    }
-  },
-  { immediate: true }
-);
-
 // Lifecycle
-onMounted(() => {
-  // Set editor ref in store
-  editorStore.setEditorAreaRef(editorAreaRef.value);
-
+onMounted(async () => {
   if (props.tools) editorStore.setTools(props.tools);
 
   if (props.modelValue) {
     editorStore.setContent(props.modelValue);
   }
 
+  // Wait for all components to mount
+  await nextTick();
+
+  // Ensure editorAreaRef is set in store
+  if (editorAreaRef.value) {
+    editorStore.setEditorAreaRef(editorAreaRef.value);
+  }
+
   document.addEventListener("selectionchange", onSelectionChange);
   document.addEventListener("click", handleClickOutside);
-  editorStore.updateToolbarState();
+
+  // Update toolbar state after everything is ready
+  setTimeout(() => {
+    editorStore.updateToolbarState();
+  }, 100);
 });
 
 onUnmounted(() => {

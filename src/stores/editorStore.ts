@@ -323,24 +323,56 @@ export const useEditorStore = defineStore("editor", () => {
   };
 
   // Command handlers
+  // Command handlers
   const handleExecCommand = (command: string, value?: string) => {
-    console.log("Hey ----->", editorAreaRef.value?.editable);
+    console.log("Executing command:", command, "with value:", value);
+    console.log("EditorAreaRef available:", !!editorAreaRef.value?.editable);
 
     if (isCodeView.value && !["undo", "redo"].includes(command)) return;
 
     const editable = editorAreaRef.value?.editable;
-    if (!editable) return;
+    if (!editable) {
+      console.error("Editor area ref not available for command:", command);
+      return;
+    }
 
+    // Focus the editor for certain commands
     if (command === "insertHTML" || command === "insertText") {
       editable.focus();
     }
 
+    // For undo/redo, ensure the editor is focused
+    if (["undo", "redo"].includes(command)) {
+      editable.focus();
+    }
+
     const success = execCommand(command, value || null);
+    console.log("Command execution result:", success);
+
     if (success) {
       updateContent();
       updateToolbarState();
     }
   };
+
+  // const handleExecCommand = (command: string, value?: string) => {
+  //   console.log("Hey ----->", editorAreaRef.value?.editable);
+
+  //   if (isCodeView.value && !["undo", "redo"].includes(command)) return;
+
+  //   const editable = editorAreaRef.value?.editable;
+  //   if (!editable) return;
+
+  //   if (command === "insertHTML" || command === "insertText") {
+  //     editable.focus();
+  //   }
+
+  //   const success = execCommand(command, value || null);
+  //   if (success) {
+  //     updateContent();
+  //     updateToolbarState();
+  //   }
+  // };
 
   const handleChangeHeading = (level: string) => {
     if (isCodeView.value) return;
