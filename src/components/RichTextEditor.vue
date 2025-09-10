@@ -107,6 +107,10 @@ const emit = defineEmits<{
 
 const editorStore = useEditorStore();
 
+onMounted(() => {
+  if (props.tools) editorStore.setTools(props.tools);
+});
+
 // Refs
 const root = ref<HTMLElement>();
 const editorAreaRef = ref<InstanceType<typeof EditorArea>>();

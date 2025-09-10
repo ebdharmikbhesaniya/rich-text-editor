@@ -1,8 +1,8 @@
 <template>
   <div class="ck-editor__bottom-bar">
     <div class="ck-word-count">
-      <span class="ck-word-count__words">Words: {{ wordCount }}</span>
-      <span class="ck-word-count__characters">Chars: {{ characterCount }}</span>
+      <span>Words: {{ wordCount }}</span>
+      <span>Chars: {{ characterCount }}</span>
     </div>
     <div
       class="ck-editor__resize-handle"

@@ -65,12 +65,45 @@ export const useEditorStore = defineStore("editor", () => {
     return text.length;
   });
 
+  const getTools = computed(() => {
+    if (tools) return tools;
+
+    // Default tools
+    return [
+      "undo",
+      "redo",
+      "bold",
+      "italic",
+      "underline",
+      "heading",
+      "foreColor",
+      "highlight",
+      "table",
+      "insertLink",
+      "insertUnorderedList",
+      "insertOrderedList",
+      "justifyLeft",
+      "justifyCenter",
+      "justifyRight",
+      "codeView",
+      "justifyFull",
+      "insertHorizontalRule",
+      "table",
+    ] as ToolName[];
+  });
+
   // Helper function
   function stripHtml(html: string): string {
     const div = document.createElement("div");
     div.innerHTML = html;
     return div.textContent || div.innerText || "";
   }
+
+  // setter
+
+  const setTools = (t: ToolName[]) => {
+    tools.value = t;
+  };
 
   // Actions
   function setContent(val: string) {
@@ -164,8 +197,12 @@ export const useEditorStore = defineStore("editor", () => {
     selectedTools,
 
     // Computed
+    getTools,
     wordCount,
     characterCount,
+
+    // setters
+    setTools,
 
     // Actions
     setContent,
