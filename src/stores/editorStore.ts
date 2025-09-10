@@ -56,6 +56,7 @@ export const useEditorStore = defineStore("editor", () => {
   const currentHighlightColor = ref("#ffff00");
   const currentTableHeaderColor = ref("#f0f0f0");
   const isInTableCell = ref(false);
+  const emitFunction = ref<Function | null>(null);
 
   // Context menu state
   const showContextMenu = ref(false);
@@ -150,6 +151,10 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   // Basic setters
+  const setEmitFunction = (emit: Function) => {
+    emitFunction.value = emit;
+  };
+
   const setTools = (t: ToolName[]) => {
     tools.value = t;
   };
@@ -227,17 +232,17 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   // Business logic methods
-  const updateContent = (emit: Function) => {
+  const updateContent = () => {
     const editable = editorAreaRef.value?.editable;
-    if (!editable) return;
+    if (!editable || !emitFunction.value) return;
 
     const newContent = isCodeView.value
       ? editable.textContent || ""
       : editable.innerHTML;
 
     content.value = newContent;
-    emit("update:modelValue", newContent);
-    emit("change", newContent);
+    emitFunction.value("update:modelValue", newContent);
+    emitFunction.value("change", newContent);
   };
 
   const updateToolbarState = () => {
@@ -318,11 +323,9 @@ export const useEditorStore = defineStore("editor", () => {
   };
 
   // Command handlers
-  const handleExecCommand = (
-    command: string,
-    value?: string,
-    emit?: Function
-  ) => {
+  const handleExecCommand = (command: string, value?: string) => {
+    console.log("Hey ----->", editorAreaRef.value?.editable);
+
     if (isCodeView.value && !["undo", "redo"].includes(command)) return;
 
     const editable = editorAreaRef.value?.editable;
@@ -333,39 +336,39 @@ export const useEditorStore = defineStore("editor", () => {
     }
 
     const success = execCommand(command, value || null);
-    if (success && emit) {
-      updateContent(emit);
+    if (success) {
+      updateContent();
       updateToolbarState();
     }
   };
 
-  const handleChangeHeading = (level: string, emit?: Function) => {
+  const handleChangeHeading = (level: string) => {
     if (isCodeView.value) return;
 
     if (level === "paragraph") {
-      handleExecCommand("formatBlock", "<p>", emit);
+      handleExecCommand("formatBlock", "<p>");
     } else {
-      handleExecCommand("formatBlock", `<${level}>`, emit);
+      handleExecCommand("formatBlock", `<${level}>`);
     }
     closeAllDropdowns();
   };
 
-  const handleChangeTextColor = (color: string, emit?: Function) => {
+  const handleChangeTextColor = (color: string) => {
     currentTextColor.value = color;
-    handleExecCommand("foreColor", color, emit);
+    handleExecCommand("foreColor", color);
     closeAllDropdowns();
   };
 
-  const handleApplyHighlight = (color: string, emit?: Function) => {
+  const handleApplyHighlight = (color: string) => {
     if (isCodeView.value) return;
 
     if (color === "transparent") {
-      handleExecCommand("hiliteColor", "transparent", emit);
-      handleExecCommand("backColor", "transparent", emit);
+      handleExecCommand("hiliteColor", "transparent");
+      handleExecCommand("backColor", "transparent");
     } else {
-      handleExecCommand("hiliteColor", color, emit);
+      handleExecCommand("hiliteColor", color);
       if (!document.queryCommandSupported("hiliteColor")) {
-        handleExecCommand("backColor", color, emit);
+        handleExecCommand("backColor", color);
       }
     }
 
@@ -373,27 +376,26 @@ export const useEditorStore = defineStore("editor", () => {
     closeAllDropdowns();
   };
 
-  const handleInsertLink = (emit?: Function) => {
+  const handleInsertLink = () => {
     const selText = getSelectedText();
     const url = prompt("Enter URL", "https://");
     if (!url) return;
 
     if (selText) {
-      handleExecCommand("createLink", url, emit);
+      handleExecCommand("createLink", url);
     } else {
       const text = prompt("Link text", url) || url;
       handleExecCommand(
         "insertHTML",
         `<a href="${escapeHtmlAttr(
           url
-        )}" target="_blank" rel="noopener noreferrer">${escapeHtml(text)}</a>`,
-        emit
+        )}" target="_blank" rel="noopener noreferrer">${escapeHtml(text)}</a>`
       );
     }
     updateToolbarState();
   };
 
-  const handleToggleCodeView = (emit?: Function) => {
+  const handleToggleCodeView = () => {
     const editable = editorAreaRef.value?.editable;
     if (!editable) return;
 
@@ -405,80 +407,68 @@ export const useEditorStore = defineStore("editor", () => {
       editable.innerHTML = editable.textContent || "<p></p>";
     }
 
-    if (emit) {
-      updateContent(emit);
-      updateToolbarState();
-    }
+    updateContent();
+    updateToolbarState();
   };
 
   // Table handlers
-  const handleInsertTableRow = (
-    position: "above" | "below",
-    emit?: Function
-  ) => {
+  const handleInsertTableRow = (position: "above" | "below") => {
     const editable = editorAreaRef.value?.editable;
     if (!editable) return;
 
     insertTableRow(editable, position, currentTableHeaderColor.value);
     closeAllDropdowns();
-    if (emit) updateContent(emit);
+    updateContent();
   };
 
-  const handleDeleteTableRow = (emit?: Function) => {
+  const handleDeleteTableRow = () => {
     const editable = editorAreaRef.value?.editable;
     if (!editable) return;
 
     deleteTableRow(editable);
     closeAllDropdowns();
-    if (emit) updateContent(emit);
+    updateContent();
   };
 
-  const handleInsertTableColumn = (
-    position: "left" | "right",
-    emit?: Function
-  ) => {
+  const handleInsertTableColumn = (position: "left" | "right") => {
     const editable = editorAreaRef.value?.editable;
     if (!editable) return;
 
     insertTableColumn(editable, position, currentTableHeaderColor.value);
     closeAllDropdowns();
-    if (emit) updateContent(emit);
+    updateContent();
   };
 
-  const handleDeleteTableColumn = (emit?: Function) => {
+  const handleDeleteTableColumn = () => {
     const editable = editorAreaRef.value?.editable;
     if (!editable) return;
 
     deleteTableColumn(editable);
     closeAllDropdowns();
-    if (emit) updateContent(emit);
+    updateContent();
   };
 
-  const handleChangeTableHeaderColor = (color: string, emit?: Function) => {
+  const handleChangeTableHeaderColor = (color: string) => {
     const editable = editorAreaRef.value?.editable;
     if (!editable) return;
 
     currentTableHeaderColor.value = color;
     changeTableHeaderColor(editable, color);
     closeAllDropdowns();
-    if (emit) updateContent(emit);
+    updateContent();
   };
 
-  const handleToggleTableHeader = (emit?: Function) => {
+  const handleToggleTableHeader = () => {
     const editable = editorAreaRef.value?.editable;
     if (!editable) return;
 
     toggleTableHeader(editable, currentTableHeaderColor.value);
     closeAllDropdowns();
-    if (emit) updateContent(emit);
+    updateContent();
     updateToolbarState();
   };
 
-  const handleCreateTableFromGrid = (
-    rows: number,
-    cols: number,
-    emit?: Function
-  ) => {
+  const handleCreateTableFromGrid = (rows: number, cols: number) => {
     const editable = editorAreaRef.value?.editable;
     if (!editable) return;
 
@@ -520,10 +510,9 @@ export const useEditorStore = defineStore("editor", () => {
     }
 
     closeAllDropdowns();
-    if (emit) {
-      updateContent(emit);
-      updateToolbarState();
-    }
+    updateContent();
+    updateToolbarState();
+
     savedSelection.value = null;
   };
 
@@ -545,7 +534,7 @@ export const useEditorStore = defineStore("editor", () => {
     const cols = parseInt(colsInput, 10);
     if (!cols || cols < 1) return;
 
-    handleCreateTableFromGrid(rows, cols, emit);
+    handleCreateTableFromGrid(rows, cols);
   };
 
   // Context menu methods
@@ -653,5 +642,7 @@ export const useEditorStore = defineStore("editor", () => {
     handleToggleTableHeader,
     handleCreateTableFromGrid,
     handleShowCustomTableDialog,
+
+    setEmitFunction,
   };
 });

@@ -73,6 +73,7 @@ const emit = defineEmits<{
 }>();
 
 const editorStore = useEditorStore();
+editorStore.setEmitFunction(emit);
 
 // Refs
 const root = ref<HTMLElement>();
@@ -80,7 +81,7 @@ const editorAreaRef = ref<InstanceType<typeof EditorArea>>();
 
 // Event Handlers
 const handleInput = () => {
-  editorStore.updateContent(emit);
+  editorStore.updateContent();
 };
 
 const handleKeydown = (event: KeyboardEvent) => {
@@ -93,19 +94,19 @@ const handleKeydown = (event: KeyboardEvent) => {
     if (k === "b" || k === "i" || k === "u") {
       event.preventDefault();
       const cmd = k === "b" ? "bold" : k === "i" ? "italic" : "underline";
-      editorStore.handleExecCommand(cmd, undefined, emit);
+      editorStore.handleExecCommand(cmd, undefined);
     }
     if (k === "k") {
       event.preventDefault();
-      editorStore.handleInsertLink(emit);
+      editorStore.handleInsertLink();
     }
     if (k === "h") {
       event.preventDefault();
-      editorStore.handleApplyHighlight(editorStore.currentHighlightColor, emit);
+      editorStore.handleApplyHighlight(editorStore.currentHighlightColor);
     }
     if (k === "=") {
       event.preventDefault();
-      editorStore.handleExecCommand("subscript", undefined, emit);
+      editorStore.handleExecCommand("subscript", undefined);
     }
   }
 
@@ -113,7 +114,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   if ((event.ctrlKey || event.metaKey) && event.shiftKey) {
     if (event.key === "=" || event.key === "+") {
       event.preventDefault();
-      editorStore.handleExecCommand("superscript", undefined, emit);
+      editorStore.handleExecCommand("superscript", undefined);
     }
   }
 
@@ -121,10 +122,10 @@ const handleKeydown = (event: KeyboardEvent) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
     if (event.shiftKey) {
       event.preventDefault();
-      editorStore.handleExecCommand("redo", undefined, emit);
+      editorStore.handleExecCommand("redo", undefined);
     } else {
       event.preventDefault();
-      editorStore.handleExecCommand("undo", undefined, emit);
+      editorStore.handleExecCommand("undo", undefined);
     }
   }
 
@@ -175,7 +176,7 @@ const handlePaste = (event: ClipboardEvent) => {
     sanitized = escapeHtml(text);
   }
 
-  editorStore.handleExecCommand("insertHTML", sanitized, emit);
+  editorStore.handleExecCommand("insertHTML", sanitized);
 };
 
 // Resize Handler
@@ -247,6 +248,16 @@ watch(
   (newTools) => {
     if (newTools) {
       editorStore.setSelectedTools(newTools);
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  editorAreaRef,
+  (newRef) => {
+    if (newRef) {
+      editorStore.setEditorAreaRef(newRef);
     }
   },
   { immediate: true }
