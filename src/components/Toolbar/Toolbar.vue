@@ -4,14 +4,14 @@
     <div class="ck-toolbar__group" v-if="hasHistoryTools">
       <tool-button
         v-if="tools.includes('undo')"
-        :disabled="!canUndo"
+        :disabled="!editorStore.canUndo"
         title="Undo (Ctrl+Z)"
-        @execute="$emit('execCommand', 'undo')">
+        @execute="editorStore.handleExecCommand('execCommand', 'undo')">
         <Undo />
       </tool-button>
       <tool-button
         v-if="tools.includes('redo')"
-        :disabled="!canRedo"
+        :disabled="!editorStore.canRedo"
         title="Redo (Ctrl+Shift+Z)"
         @execute="$emit('execCommand', 'redo')">
         <Redo />
@@ -35,7 +35,7 @@
     <text-formatting-tools
       v-if="hasFormattingTools"
       :tools="tools"
-      :activeStates="activeStates"
+      :activeStates="editorStore.activeStates"
       @execCommand="$emit('execCommand', $event)" />
 
     <span
@@ -46,8 +46,8 @@
     <color-tool
       v-if="hasColorTools"
       :tools="tools"
-      :currentTextColor="currentTextColor"
-      :currentHighlightColor="currentHighlightColor"
+      :currentTextColor="editorStore.currentTextColor"
+      :currentHighlightColor="editorStore.currentHighlightColor"
       @changeTextColor="$emit('changeTextColor', $event)"
       @applyHighlight="$emit('applyHighlight', $event)" />
 
@@ -57,8 +57,8 @@
     Hello
     <table-tool
       v-if="hasTableTools"
-      :currentTableHeaderColor="currentTableHeaderColor"
-      :isInTableCell="isInTableCell"
+      :currentTableHeaderColor="editorStore.currentTableHeaderColor"
+      :isInTableCell="editorStore.isInTableCell"
       @insertTableRow="$emit('insertTableRow', $event)"
       @deleteTableRow="$emit('deleteTableRow')"
       @insertTableColumn="$emit('insertTableColumn', $event)"
@@ -97,7 +97,7 @@
     <list-tools
       v-if="hasListTools"
       :tools="tools"
-      :activeStates="activeStates"
+      :activeStates="editorStore.activeStates"
       @execCommand="$emit('execCommand', $event)" />
 
     <span
@@ -108,7 +108,7 @@
     <alignment-tools
       v-if="hasAlignmentTools"
       :tools="tools"
-      :activeStates="activeStates"
+      :activeStates="editorStore.activeStates"
       @execCommand="$emit('execCommand', $event)" />
 
     <span
@@ -118,7 +118,7 @@
     <!-- Code View Toggle -->
     <div class="ck-toolbar__group" v-if="tools.includes('codeView')">
       <tool-button
-        :isActive="isCodeView"
+        :isActive="editorStore.isCodeView"
         title="Source Code View"
         @execute="editorStore.handleToggleCodeView">
         <CodeBrackets />
@@ -141,18 +141,6 @@ import { CodeBrackets, Link, Minus, Redo, Undo } from "@iconoir/vue";
 import { useEditorStore } from "@/stores/editorStore";
 
 const editorStore = useEditorStore();
-
-const props = defineProps<{
-  canUndo: boolean;
-  canRedo: boolean;
-  activeStates: Record<string, boolean>;
-  currentHeading: string;
-  currentTextColor: string;
-  currentHighlightColor: string;
-  currentTableHeaderColor: string;
-  isInTableCell: boolean;
-  isCodeView: boolean;
-}>();
 
 const emit = defineEmits<{
   execCommand: [command: string, value?: string];

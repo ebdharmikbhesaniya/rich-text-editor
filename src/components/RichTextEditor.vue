@@ -4,15 +4,6 @@
     :class="{ 'ck-focused': editorStore.isFocused }"
     ref="root">
     <Toolbar
-      :canUndo="editorStore.canUndo"
-      :canRedo="editorStore.canRedo"
-      :activeStates="editorStore.activeStates"
-      :currentHeading="editorStore.currentHeading"
-      :currentTextColor="editorStore.currentTextColor"
-      :currentHighlightColor="editorStore.currentHighlightColor"
-      :currentTableHeaderColor="editorStore.currentTableHeaderColor"
-      :isInTableCell="editorStore.isInTableCell"
-      :isCodeView="editorStore.isCodeView"
       @execCommand="editorStore.handleExecCommand"
       @changeHeading="editorStore.handleChangeHeading"
       @changeTextColor="editorStore.handleChangeTextColor"
@@ -25,7 +16,7 @@
       @toggleTableHeader="editorStore.handleToggleTableHeader"
       @createTableFromGrid="editorStore.handleCreateTableFromGrid"
       @showCustomTableDialog="editorStore.handleShowCustomTableDialog"
-      @insertLink="editorStore.handleInsertLink"/>
+      @insertLink="editorStore.handleInsertLink" />
 
     <EditorArea
       v-model="editorStore.content"
