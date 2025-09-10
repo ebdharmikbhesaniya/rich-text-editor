@@ -54,7 +54,7 @@
     <span class="ck-toolbar__separator" v-if="hasColorTools && hasTableTools" />
 
     <!-- Table Tool -->
-     Hello
+    Hello
     <table-tool
       v-if="hasTableTools"
       :currentTableHeaderColor="currentTableHeaderColor"
@@ -66,8 +66,8 @@
       @changeTableHeaderColor="$emit('changeTableHeaderColor', $event)"
       @toggleTableHeader="$emit('toggleTableHeader')"
       @showCustomTableDialog="$emit('showCustomTableDialog')" />
-      Hey
-      <!-- @createTableFromGrid="$emit('createTableFromGrid', $event)" -->
+    Hey
+    <!-- @createTableFromGrid="$emit('createTableFromGrid', $event)" -->
     <span
       class="ck-toolbar__separator"
       v-if="hasTableTools && hasInsertTools" />
@@ -120,7 +120,7 @@
       <tool-button
         :isActive="isCodeView"
         title="Source Code View"
-        @execute="$emit('toggleCodeView')">
+        @execute="editorStore.handleToggleCodeView">
         <CodeBrackets />
       </tool-button>
     </div>
@@ -138,9 +138,11 @@ import TableTool from "./tools/TableTool.vue";
 import ListTools from "./tools/ListTools.vue";
 import AlignmentTools from "./tools/AlignmentTools.vue";
 import { CodeBrackets, Link, Minus, Redo, Undo } from "@iconoir/vue";
+import { useEditorStore } from "@/stores/editorStore";
+
+const editorStore = useEditorStore();
 
 const props = defineProps<{
-  tools?: ToolName[];
   canUndo: boolean;
   canRedo: boolean;
   activeStates: Record<string, boolean>;
@@ -166,12 +168,11 @@ const emit = defineEmits<{
   createTableFromGrid: [rows: number, cols: number];
   showCustomTableDialog: [];
   insertLink: [];
-  toggleCodeView: [];
 }>();
 
 const tools = computed(() =>
-  props.tools && props.tools.length > 0
-    ? props.tools
+  editorStore.tools && editorStore.tools.length > 0
+    ? editorStore.tools
     : (["bold", "italic", "underline", "heading"] as ToolName[])
 );
 
