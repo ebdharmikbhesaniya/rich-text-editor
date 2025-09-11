@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, nextTick } from "vue";
+import { ref } from "vue";
 
 export const useToolbarStore = defineStore("toolbar", () => {
   // State

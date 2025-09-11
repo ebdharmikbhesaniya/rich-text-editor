@@ -22,13 +22,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import Toolbar from "@/components/Toolbar/Toolbar.vue";
 import { useEditorStore } from "@/stores/editorStore";
 import type { EditorProps, ToolName } from "@/types";
-import Toolbar from "@/components/Toolbar/Toolbar.vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import ContextMenu from "./ContextMenu.vue";
 import EditorContent from "./EditorContent.vue";
 import StatusBar from "./StatusBar.vue";
-import ContextMenu from "./ContextMenu.vue";
 
 interface Props extends EditorProps {
   showToolbar?: boolean;

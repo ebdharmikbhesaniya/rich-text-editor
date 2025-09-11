@@ -29,12 +29,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from "vue";
 import { useEditorStore } from "@/stores/editorStore";
-import { useToolbarStore } from "@/stores/toolbarStore";
 import { useTableStore } from "@/stores/tableStore";
+import { useToolbarStore } from "@/stores/toolbarStore";
 import { execCommand } from "@/utils/commands";
 import { sanitizeHtmlSnippet } from "@/utils/sanitize";
+import { onMounted, ref, watch } from "vue";
 
 interface Props {
   modelValue: string;

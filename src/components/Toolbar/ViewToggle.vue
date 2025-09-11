@@ -10,8 +10,8 @@
 </template>
 
 <script setup lang="ts">
-import { useEditorStore } from "@/stores/editorStore";
 import { Button } from "@/components/ui/button";
+import { useEditorStore } from "@/stores/editorStore";
 import { Code } from "lucide-vue-next";
 
 const editorStore = useEditorStore();

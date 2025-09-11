@@ -7,9 +7,7 @@ const limitedContent = ref();
 
 <template>
   Hello
-  <RichTextEditor
-    v-model="limitedContent"
-    placeholder="Simple editor..." />
+  <RichTextEditor v-model="limitedContent" placeholder="Simple editor..." />
 </template>
 
 <style scoped></style>

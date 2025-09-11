@@ -1,7 +1,7 @@
-import { onMounted, onUnmounted } from "vue";
 import { useEditorStore } from "@/stores/editorStore";
-import { useToolbarStore } from "@/stores/toolbarStore";
 import { useTableStore } from "@/stores/tableStore";
+import { useToolbarStore } from "@/stores/toolbarStore";
+import { onMounted, onUnmounted } from "vue";
 
 export function useEditor() {
   const editorStore = useEditorStore();

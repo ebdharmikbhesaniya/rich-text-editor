@@ -63,16 +63,16 @@
 </template>
 
 <script setup lang="ts">
+import { Button } from "@/components/ui/button";
 import { useEditorStore } from "@/stores/editorStore";
 import { execCommand, isActive } from "@/utils/commands";
-import { Button } from "@/components/ui/button";
 import {
   Bold,
   Italic,
-  Underline,
   Strikethrough,
-  Superscript,
   Subscript,
+  Superscript,
+  Underline,
 } from "lucide-vue-next";
 
 const editorStore = useEditorStore();

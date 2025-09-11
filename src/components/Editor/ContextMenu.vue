@@ -49,12 +49,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { Button } from "@/components/ui/button";
 import { useEditorStore } from "@/stores/editorStore";
 import { useToolbarStore } from "@/stores/toolbarStore";
-import { execCommand, isActive, insertLink } from "@/utils/commands";
-import { Button } from "@/components/ui/button";
-import { Bold, Italic, Link, Highlighter } from "lucide-vue-next";
+import { execCommand, insertLink, isActive } from "@/utils/commands";
+import { Bold, Highlighter, Italic, Link } from "lucide-vue-next";
+import { ref } from "vue";
 
 const contextMenuRef = ref<HTMLElement>();
 const editorStore = useEditorStore();

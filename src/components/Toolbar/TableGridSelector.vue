@@ -63,16 +63,16 @@
 </template>
 
 <script setup lang="ts">
-import { useTableStore } from "@/stores/tableStore";
-import { useToolbarStore } from "@/stores/toolbarStore";
-import { useEditorStore } from "@/stores/editorStore";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { Table as TableIcon, ChevronDown, Plus } from "lucide-vue-next";
+import { useEditorStore } from "@/stores/editorStore";
+import { useTableStore } from "@/stores/tableStore";
+import { useToolbarStore } from "@/stores/toolbarStore";
+import { ChevronDown, Plus, Table as TableIcon } from "lucide-vue-next";
 
 const tableStore = useTableStore();
 const toolbarStore = useToolbarStore();

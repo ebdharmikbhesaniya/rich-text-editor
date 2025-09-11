@@ -23,10 +23,10 @@
 </template>
 
 <script setup lang="ts">
+import { Button } from "@/components/ui/button";
 import { useEditorStore } from "@/stores/editorStore";
 import { execCommand } from "@/utils/commands";
-import { Button } from "@/components/ui/button";
-import { Undo, Redo } from "lucide-vue-next";
+import { Redo, Undo } from "lucide-vue-next";
 
 const editorStore = useEditorStore();
 </script>

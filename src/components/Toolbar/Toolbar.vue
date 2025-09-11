@@ -36,17 +36,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
 import { useEditorStore } from "@/stores/editorStore";
-import HistoryButtons from "./HistoryButtons.vue";
-import HeadingDropdown from "./HeadingDropdown.vue";
-import FormatButtons from "./FormatButtons.vue";
+import { computed } from "vue";
+import AlignmentButtons from "./AlignmentButtons.vue";
 import ColorPicker from "./ColorPicker.vue";
+import FormatButtons from "./FormatButtons.vue";
+import HeadingDropdown from "./HeadingDropdown.vue";
 import HighlightPicker from "./HighlightPicker.vue";
-import TableTools from "./TableTools.vue";
+import HistoryButtons from "./HistoryButtons.vue";
 import InsertTools from "./InsertTools.vue";
 import ListButtons from "./ListButtons.vue";
-import AlignmentButtons from "./AlignmentButtons.vue";
+import TableTools from "./TableTools.vue";
 import ViewToggle from "./ViewToggle.vue";
 
 const editorStore = useEditorStore();

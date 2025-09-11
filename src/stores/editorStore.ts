@@ -1,6 +1,6 @@
+import type { ToolName } from "@/types";
 import { defineStore } from "pinia";
-import { ref, computed, nextTick } from "vue";
-import type { EditorState, ToolName } from "@/types";
+import { computed, nextTick, ref } from "vue";
 
 export const useEditorStore = defineStore("editor", () => {
   // State

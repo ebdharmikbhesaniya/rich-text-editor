@@ -23,9 +23,9 @@
 </template>
 
 <script setup lang="ts">
+import { Button } from "@/components/ui/button";
 import { useEditorStore } from "@/stores/editorStore";
 import { execCommand, insertLink } from "@/utils/commands";
-import { Button } from "@/components/ui/button";
 import { Link, Minus } from "lucide-vue-next";
 import TableGridSelector from "./TableGridSelector.vue";
 

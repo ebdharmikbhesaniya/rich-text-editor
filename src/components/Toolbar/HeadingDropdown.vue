@@ -28,15 +28,15 @@
 </template>
 
 <script setup lang="ts">
-import { useToolbarStore } from "@/stores/toolbarStore";
-import { execCommand } from "@/utils/commands";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+import { useToolbarStore } from "@/stores/toolbarStore";
+import { execCommand } from "@/utils/commands";
 import { ChevronDown } from "lucide-vue-next";
 
 const toolbarStore = useToolbarStore();
