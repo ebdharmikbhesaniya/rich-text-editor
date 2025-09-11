@@ -67,7 +67,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -78,6 +77,7 @@ import { useEditorStore } from "@/stores/editorStore";
 import { useTableStore } from "@/stores/tableStore";
 import { useToolbarStore } from "@/stores/toolbarStore";
 import { ChevronDown, Plus, Table as TableIcon } from "lucide-vue-next";
+import { ref } from "vue";
 
 const tableStore = useTableStore();
 const toolbarStore = useToolbarStore();
@@ -186,13 +186,14 @@ const createTableFromGrid = (rows: number, cols: number) => {
   }
 
   // Create table HTML
+  // In createTableFromGrid function, replace the table HTML generation:
   const columnWidth = Math.floor(100 / cols);
   let html = `<table style="
-      border-collapse: collapse;
-      width: 100%;
-      table-layout: fixed;
-      margin: 1em 0;
-    ">`;
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+  ">`;
 
   html += "<colgroup>";
   for (let c = 0; c < cols; c++) {
@@ -207,25 +208,31 @@ const createTableFromGrid = (rows: number, cols: number) => {
     for (let c = 0; c < cols; c++) {
       if (isFirstRow) {
         html += `<th style="
-            border: 1px solid #ccc;
-            padding: 8px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            vertical-align: top;
-            min-height: 20px;
-            background-color: ${tableStore.currentHeaderColor};
-            font-weight: bold;
-            text-align: center;
-          ">Header</th>`;
+          border: 1px solid #ccc;
+          padding: 8px;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          word-break: break-word;
+          vertical-align: top;
+          min-height: 20px;
+          max-width: 1px;
+          background-color: ${tableStore.currentHeaderColor};
+          font-weight: bold;
+          text-align: center;
+          overflow: hidden;
+        ">Header</th>`;
       } else {
         html += `<td style="
-            border: 1px solid #ccc;
-            padding: 8px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            vertical-align: top;
-            min-height: 20px;
-          ">&nbsp;</td>`;
+          border: 1px solid #ccc;
+          padding: 8px;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          word-break: break-word;
+          vertical-align: top;
+          min-height: 20px;
+          max-width: 1px;
+          overflow: hidden;
+        ">&nbsp;</td>`;
       }
     }
     html += "</tr>";
