@@ -1,5 +1,6 @@
 <template>
   <div class="flex items-center gap-1">
+    <!-- TODO: issue 1: active is not properly working -->
     <Button
       v-if="editorStore.isToolEnabled('bold')"
       variant="ghost"

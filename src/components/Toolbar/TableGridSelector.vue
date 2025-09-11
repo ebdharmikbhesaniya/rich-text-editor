@@ -1,7 +1,11 @@
 <template>
   <DropdownMenu v-model:open="toolbarStore.dropdowns.tableGrid">
     <DropdownMenuTrigger as-child>
-      <Button variant="ghost" size="sm" title="Insert Table">
+      <Button
+        variant="ghost"
+        size="sm"
+        title="Insert Table"
+        @mousedown="(e: any) => handleDropdownToggle(e)">
         <TableIcon class="h-4 w-4" />
         <ChevronDown class="h-3 w-3 ml-1" />
       </Button>
@@ -73,23 +77,123 @@ import { useEditorStore } from "@/stores/editorStore";
 import { useTableStore } from "@/stores/tableStore";
 import { useToolbarStore } from "@/stores/toolbarStore";
 import { ChevronDown, Plus, Table as TableIcon } from "lucide-vue-next";
+import { ref } from "vue";
 
 const tableStore = useTableStore();
 const toolbarStore = useToolbarStore();
 const editorStore = useEditorStore();
 
+// FIXED: Store the original cursor position when dropdown opens
+const originalCursorPosition = ref<Range | null>(null);
+
+// FIXED: Save cursor position BEFORE opening dropdown
+const handleDropdownToggle = (event: MouseEvent) => {
+  event.preventDefault();
+
+  // Save the current cursor position in the editor
+  const selection = window.getSelection();
+  if (selection && selection.rangeCount > 0 && editorStore.editorElement) {
+    const range = selection.getRangeAt(0);
+
+    // Check if the selection is within the editor
+    const isInEditor =
+      editorStore.editorElement.contains(
+        range.commonAncestorContainer as Node
+      ) || editorStore.editorElement === range.commonAncestorContainer;
+
+    if (isInEditor) {
+      // Save the exact cursor position
+      originalCursorPosition.value = range.cloneRange();
+      console.log("Saved cursor position in editor");
+    } else {
+      // Cursor is outside editor, create position at end
+      originalCursorPosition.value = createEndPosition();
+      console.log("Cursor outside editor, created end position");
+    }
+  } else {
+    // No selection, create position at end of editor
+    originalCursorPosition.value = createEndPosition();
+    console.log("No selection, created end position");
+  }
+
+  // Open the dropdown
+  toolbarStore.toggleDropdown("tableGrid");
+};
+
+// FIXED: Create a position at the end of editor content
+const createEndPosition = (): Range | null => {
+  if (!editorStore.editorElement) return null;
+
+  const range = document.createRange();
+
+  if (editorStore.editorElement.childNodes.length > 0) {
+    const lastChild = editorStore.editorElement.lastChild!;
+
+    if (lastChild.nodeType === Node.TEXT_NODE) {
+      range.setStart(lastChild, (lastChild.textContent || "").length);
+      range.setEnd(lastChild, (lastChild.textContent || "").length);
+    } else if (lastChild.nodeName === "P" || lastChild.nodeName === "DIV") {
+      // Place cursor at end of last paragraph/div
+      if (lastChild.childNodes.length > 0) {
+        const lastTextNode = lastChild.lastChild!;
+        if (lastTextNode.nodeType === Node.TEXT_NODE) {
+          range.setStart(lastTextNode, (lastTextNode.textContent || "").length);
+          range.setEnd(lastTextNode, (lastTextNode.textContent || "").length);
+        } else {
+          range.setStartAfter(lastTextNode);
+          range.setEndAfter(lastTextNode);
+        }
+      } else {
+        range.setStart(lastChild, 0);
+        range.setEnd(lastChild, 0);
+      }
+    } else {
+      range.setStartAfter(lastChild);
+      range.setEndAfter(lastChild);
+    }
+  } else {
+    // Editor is empty, create a paragraph
+    const p = document.createElement("p");
+    p.innerHTML = "<br>";
+    editorStore.editorElement.appendChild(p);
+    range.setStart(p, 0);
+    range.setEnd(p, 0);
+  }
+
+  return range;
+};
+
+// FIXED: Use the saved cursor position for table insertion
 const createTableFromGrid = (rows: number, cols: number) => {
-  if (!rows || !cols) return;
+  if (
+    !rows ||
+    !cols ||
+    !originalCursorPosition.value ||
+    !editorStore.editorElement
+  )
+    return;
 
-  editorStore.restoreSelection();
+  console.log("Inserting table at saved cursor position");
 
+  // Focus the editor first
+  editorStore.editorElement.focus();
+
+  // Restore the original cursor position
+  const selection = window.getSelection();
+  if (selection) {
+    selection.removeAllRanges();
+    selection.addRange(originalCursorPosition.value);
+  }
+
+  // Create table HTML
+  // In createTableFromGrid function, replace the table HTML generation:
   const columnWidth = Math.floor(100 / cols);
   let html = `<table style="
-      border-collapse: collapse;
-      width: 100%;
-      table-layout: fixed;
-      margin: 1em 0;
-    ">`;
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+  ">`;
 
   html += "<colgroup>";
   for (let c = 0; c < cols; c++) {
@@ -104,25 +208,31 @@ const createTableFromGrid = (rows: number, cols: number) => {
     for (let c = 0; c < cols; c++) {
       if (isFirstRow) {
         html += `<th style="
-            border: 1px solid #ccc;
-            padding: 8px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            vertical-align: top;
-            min-height: 20px;
-            background-color: ${tableStore.currentHeaderColor};
-            font-weight: bold;
-            text-align: center;
-          ">Header</th>`;
+          border: 1px solid #ccc;
+          padding: 8px;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          word-break: break-word;
+          vertical-align: top;
+          min-height: 20px;
+          max-width: 1px;
+          background-color: ${tableStore.currentHeaderColor};
+          font-weight: bold;
+          text-align: center;
+          overflow: hidden;
+        ">Header</th>`;
       } else {
         html += `<td style="
-            border: 1px solid #ccc;
-            padding: 8px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            vertical-align: top;
-            min-height: 20px;
-          ">&nbsp;</td>`;
+          border: 1px solid #ccc;
+          padding: 8px;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          word-break: break-word;
+          vertical-align: top;
+          min-height: 20px;
+          max-width: 1px;
+          overflow: hidden;
+        ">&nbsp;</td>`;
       }
     }
     html += "</tr>";
@@ -130,34 +240,45 @@ const createTableFromGrid = (rows: number, cols: number) => {
 
   html += "</table><p></p>";
 
-  try {
-    const success = document.execCommand("insertHTML", false, html);
-    if (!success && editorStore.savedSelection) {
-      insertTableAtSelection(html);
+  // Insert the table at the restored cursor position
+  setTimeout(() => {
+    try {
+      const success = document.execCommand("insertHTML", false, html);
+      if (!success) {
+        console.warn("execCommand failed, trying fallback");
+        insertTableAtSavedPosition(html);
+      } else {
+        console.log("Table inserted successfully with execCommand");
+      }
+    } catch (error) {
+      console.error("execCommand error:", error);
+      insertTableAtSavedPosition(html);
     }
-  } catch (error) {
-    if (editorStore.savedSelection) {
-      insertTableAtSelection(html);
-    }
-  }
 
-  toolbarStore.closeAllDropdowns();
-  editorStore.savedSelection = null;
+    // Update editor content and close dropdown
+    editorStore.updateToolbarState();
+    toolbarStore.closeAllDropdowns();
+
+    // Clear the saved position
+    originalCursorPosition.value = null;
+  }, 10);
 };
 
-const insertTableAtSelection = (tableHTML: string) => {
-  if (!editorStore.savedSelection || !editorStore.editorElement) return;
+// FIXED: Fallback method using saved position
+const insertTableAtSavedPosition = (tableHTML: string) => {
+  if (!originalCursorPosition.value || !editorStore.editorElement) return;
 
   try {
-    editorStore.editorElement.focus();
     const selection = window.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(editorStore.savedSelection);
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(originalCursorPosition.value);
+    }
 
     const temp = document.createElement("div");
     temp.innerHTML = tableHTML;
 
-    const range = editorStore.savedSelection.cloneRange();
+    const range = originalCursorPosition.value.cloneRange();
     range.deleteContents();
 
     const nodes = Array.from(temp.childNodes);
@@ -166,17 +287,26 @@ const insertTableAtSelection = (tableHTML: string) => {
       range.collapse(false);
     });
 
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-  } catch (error) {
-    if (editorStore.editorElement) {
-      editorStore.editorElement.innerHTML += tableHTML;
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
     }
+
+    console.log("Table inserted using fallback method");
+  } catch (error) {
+    console.error("Fallback insertion failed:", error);
+    // Last resort - append to end
+    editorStore.editorElement.innerHTML += tableHTML;
   }
 };
 
+// FIXED: Custom table dialog using saved position
 const showCustomTableDialog = () => {
-  editorStore.saveSelection();
+  // Use the same saved cursor position
+  if (!originalCursorPosition.value) {
+    // If no saved position, create one
+    originalCursorPosition.value = createEndPosition();
+  }
 
   const rowsInput = prompt("Number of rows:", "3");
   if (rowsInput === null) return;

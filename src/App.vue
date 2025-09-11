@@ -2,7 +2,11 @@
 import { ref } from "vue";
 import RichTextEditor from "./components/Editor/RichTextEditor.vue";
 
-const limitedContent = ref();
+//  TODO: issue 2: this data not bind properly in to model
+
+const limitedContent = ref(
+  "jtyjtyjty<b>tyjtyjtyjtyyyyyytyjtyjytjtyjtyj</b><p></p>"
+);
 </script>
 
 <template>

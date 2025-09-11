@@ -50,9 +50,11 @@ export function execCommand(command: string, value: any = null): boolean {
 }
 
 export function isActive(command: string): boolean {
-  const editorStore = useEditorStore();
-  if (editorStore.isCodeView) return false;
+  // const editorStore = useEditorStore();
+  // if (editorStore.isCodeView) return false;
   try {
+    console.log("test --->", document.queryCommandState(command));
+
     return document.queryCommandState(command);
   } catch {
     return false;
@@ -67,19 +69,90 @@ export function insertLink(): void {
   const url = prompt("Enter URL", "https://");
   if (!url) return;
 
+  // FIXED: Enhanced link styling with color and underline
+  const linkStyle = `
+    color: #2563eb;
+    text-decoration: underline;
+    text-decoration-color: #2563eb;
+    text-underline-offset: 2px;
+    transition: all 0.2s ease;
+  `
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const hoverStyle = `
+    color: #1d4ed8;
+    text-decoration-color: #1d4ed8;
+  `;
+
   if (selectedText) {
+    // Create link from selected text
     execCommand("createLink", url);
+
+    // Apply custom styling to the newly created link
+    setTimeout(() => {
+      if (!editorStore.editorElement) return;
+
+      // Find the newly created link and apply styling
+      const links = editorStore.editorElement.querySelectorAll("a");
+      const targetLink = Array.from(links).find(
+        (link) =>
+          link.getAttribute("href") === url && link.textContent === selectedText
+      );
+
+      if (targetLink) {
+        applyLinkStyling(targetLink as HTMLAnchorElement, linkStyle);
+      }
+    }, 10);
   } else {
+    // Create new link with custom text
     const text = prompt("Link text", url) || url;
     const escapedUrl = escapeHtmlAttr(url);
     const escapedText = escapeHtml(text);
-    execCommand(
-      "insertHTML",
-      `<a href="${escapedUrl}" target="_blank" rel="noopener noreferrer">${escapedText}</a>`
-    );
+
+    const linkHTML = `<a href="${escapedUrl}" target="_blank" rel="noopener noreferrer" style="${linkStyle}" class="editor-link">${escapedText}</a>`;
+
+    execCommand("insertHTML", linkHTML);
+
+    // Apply hover effects after insertion
+    setTimeout(() => {
+      applyLinkHoverEffects();
+    }, 10);
   }
 
   editorStore.updateToolbarState();
+}
+
+function applyLinkStyling(link: HTMLAnchorElement, style: string) {
+  // Apply inline styles
+  link.setAttribute("style", style);
+  link.setAttribute("class", "editor-link");
+  link.setAttribute("target", "_blank");
+  link.setAttribute("rel", "noopener noreferrer");
+}
+
+// Helper function to apply hover effects to all links
+function applyLinkHoverEffects() {
+  const editorStore = useEditorStore();
+  if (!editorStore.editorElement) return;
+
+  const links = editorStore.editorElement.querySelectorAll("a.editor-link");
+  links.forEach((link) => {
+    const htmlLink = link as HTMLAnchorElement;
+
+    // Add hover event listeners
+    htmlLink.addEventListener("mouseenter", () => {
+      htmlLink.style.color = "#1d4ed8";
+      htmlLink.style.textDecorationColor = "#1d4ed8";
+      htmlLink.style.transform = "translateY(-1px)";
+    });
+
+    htmlLink.addEventListener("mouseleave", () => {
+      htmlLink.style.color = "#2563eb";
+      htmlLink.style.textDecorationColor = "#2563eb";
+      htmlLink.style.transform = "translateY(0)";
+    });
+  });
 }
 
 function escapeHtml(str: string): string {
