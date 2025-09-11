@@ -96,6 +96,52 @@ const handleKeydown = (event: KeyboardEvent) => {
       editorStore.maintainFocus(() => document.execCommand("undo"));
     }
   }
+
+  if (event.key === "Enter") {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      let node = selection.anchorNode;
+      if (node?.nodeType === Node.TEXT_NODE) {
+        node = node.parentElement;
+      }
+
+      // Check if we're in a list item
+      while (node && node !== editorStore.editorElement) {
+        if ((node as Element).tagName === "LI") {
+          event.preventDefault();
+          createNewListItem(node as HTMLElement, selection);
+          return;
+        }
+        node = (node as Element).parentElement;
+      }
+    }
+  }
+};
+
+const createNewListItem = (currentLI: HTMLElement, selection: Selection) => {
+  const list = currentLI.parentElement;
+  if (!list) return;
+
+  const newLI = document.createElement("li");
+  newLI.innerHTML = "&nbsp;";
+  newLI.style.cssText = currentLI.style.cssText;
+
+  // Insert after current item
+  if (currentLI.nextSibling) {
+    list.insertBefore(newLI, currentLI.nextSibling);
+  } else {
+    list.appendChild(newLI);
+  }
+
+  // Place cursor in new list item
+  const range = document.createRange();
+  range.setStart(newLI, 0);
+  range.collapse(true);
+
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  newLI.focus();
 };
 
 const handleKeyup = () => {
