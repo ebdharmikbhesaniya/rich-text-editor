@@ -174,3 +174,60 @@ onUnmounted(() => {
   // Cleanup if needed
 });
 </script>
+
+<style scoped>
+/* Enhanced link styling for the editor */
+.editor-content :deep(a),
+.editor-content :deep(a.editor-link) {
+  color: #2563eb !important;
+  text-decoration: underline !important;
+  text-decoration-color: #2563eb !important;
+  text-underline-offset: 2px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.editor-content :deep(a:hover),
+.editor-content :deep(a.editor-link:hover) {
+  color: #1d4ed8 !important;
+  text-decoration-color: #1d4ed8 !important;
+  text-decoration-thickness: 2px !important;
+  transform: translateY(-1px) !important;
+  text-shadow: 0 1px 3px rgba(29, 78, 216, 0.2) !important;
+}
+
+.editor-content :deep(a:active),
+.editor-content :deep(a.editor-link:active) {
+  color: #1e40af !important;
+  transform: translateY(0) !important;
+}
+
+/* Visited link styling */
+.editor-content :deep(a:visited),
+.editor-content :deep(a.editor-link:visited) {
+  color: #7c3aed !important;
+  text-decoration-color: #7c3aed !important;
+}
+
+.editor-content :deep(a:visited:hover),
+.editor-content :deep(a.editor-link:visited:hover) {
+  color: #6d28d9 !important;
+  text-decoration-color: #6d28d9 !important;
+}
+
+/* Focus styles for accessibility */
+.editor-content :deep(a:focus),
+.editor-content :deep(a.editor-link:focus) {
+  outline: 2px solid #2563eb !important;
+  outline-offset: 2px !important;
+  border-radius: 2px !important;
+}
+
+/* Code view link styling */
+.editor-content.font-mono :deep(a) {
+  font-family: "Courier New", monospace !important;
+  background-color: rgba(37, 99, 235, 0.1) !important;
+  padding: 2px 4px !important;
+  border-radius: 3px !important;
+}
+</style>
