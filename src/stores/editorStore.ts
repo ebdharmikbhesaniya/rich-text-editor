@@ -1,6 +1,6 @@
-import type { ToolName } from "@/types";
 import { defineStore } from "pinia";
-import { computed, nextTick, ref } from "vue";
+import { ref, computed, nextTick } from "vue";
+import type { EditorState, ToolName } from "@/types";
 
 export const useEditorStore = defineStore("editor", () => {
   // State
@@ -50,13 +50,50 @@ export const useEditorStore = defineStore("editor", () => {
     enabledTools.value = tools;
   };
 
+  // FIXED: Improved toolbar state update with better redo detection
   const updateToolbarState = () => {
     nextTick(() => {
       try {
-        canUndo.value = document.queryCommandEnabled?.("undo") || false;
-        canRedo.value = document.queryCommandEnabled?.("redo") || false;
-      } catch {
-        canUndo.value = canRedo.value = false;
+        // Enhanced redo detection
+        canUndo.value =
+          document.queryCommandEnabled("undo") &&
+          document.queryCommandState("undo") !== null;
+
+        // Try multiple approaches for redo detection
+        let hasRedo = false;
+        try {
+          hasRedo =
+            document.queryCommandEnabled("redo") &&
+            document.queryCommandState("redo") !== null;
+        } catch (e) {
+          // Fallback redo detection
+          const selection = window.getSelection();
+          const range =
+            selection && selection.rangeCount > 0
+              ? selection.getRangeAt(0).cloneRange()
+              : null;
+
+          try {
+            // Test if redo is available by attempting it
+            hasRedo = document.execCommand("redo", false, undefined);
+            if (hasRedo) {
+              // Undo the redo we just did to check
+              document.execCommand("undo", false, undefined);
+            }
+          } catch (err) {
+            hasRedo = false;
+          }
+
+          // Restore selection if it existed
+          if (range && selection) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        }
+        canRedo.value = hasRedo;
+      } catch (error) {
+        canUndo.value = false;
+        canRedo.value = false;
       }
     });
   };
@@ -69,7 +106,7 @@ export const useEditorStore = defineStore("editor", () => {
       const range = selection.getRangeAt(0);
       const container = range.commonAncestorContainer;
       return (
-        editorElement.value.contains(container) ||
+        editorElement.value.contains(container as Node) ||
         editorElement.value === container
       );
     };
@@ -83,8 +120,8 @@ export const useEditorStore = defineStore("editor", () => {
       if (editorElement.value.childNodes.length > 0) {
         const lastChild = editorElement.value.lastChild!;
         if (lastChild.nodeType === Node.TEXT_NODE) {
-          range.setStart(lastChild, lastChild.textContent?.length || 0);
-          range.setEnd(lastChild, lastChild.textContent?.length || 0);
+          range.setStart(lastChild, (lastChild.textContent || "").length);
+          range.setEnd(lastChild, (lastChild.textContent || "").length);
         } else {
           range.setStartAfter(lastChild);
           range.setEndAfter(lastChild);
@@ -109,22 +146,127 @@ export const useEditorStore = defineStore("editor", () => {
     }
   };
 
+  // FIXED: Improved code view toggle with proper state management
   const toggleCodeView = () => {
     if (!editorElement.value) return;
 
-    isCodeView.value = !isCodeView.value;
+    const currentSelection = window.getSelection();
+    let selectionInfo: any = null;
 
-    if (isCodeView.value) {
-      editorElement.value.textContent = editorElement.value.innerHTML;
-    } else {
-      editorElement.value.innerHTML = editorElement.value.textContent || "";
+    if (currentSelection && currentSelection.rangeCount > 0) {
+      const range = currentSelection.getRangeAt(0);
+      selectionInfo = {
+        startOffset: range.startOffset,
+        endOffset: range.endOffset,
+        startContainer: range.startContainer,
+        endContainer: range.endContainer,
+      };
     }
 
-    setContent(
-      isCodeView.value
-        ? editorElement.value.textContent || ""
-        : editorElement.value.innerHTML
-    );
+    if (isCodeView.value) {
+      // Switching from code view to WYSIWYG
+      const textContent = editorElement.value.textContent || "";
+
+      // Clear the editor first
+      editorElement.value.innerHTML = "";
+
+      // Set the HTML content
+      editorElement.value.innerHTML = textContent || "<p></p>";
+
+      isCodeView.value = false;
+
+      // Restore focus and reinitialize editor state
+      setTimeout(() => {
+        if (!editorElement.value) return;
+
+        editorElement.value.focus();
+
+        // Place cursor at the end
+        const range = document.createRange();
+        const selection = window.getSelection();
+
+        if (editorElement.value.childNodes.length > 0) {
+          const lastNode = editorElement.value.lastChild!;
+          if (lastNode.nodeType === Node.TEXT_NODE) {
+            range.setStart(lastNode, (lastNode.textContent || "").length);
+          } else {
+            range.setStartAfter(lastNode);
+          }
+        } else {
+          range.setStart(editorElement.value, 0);
+        }
+
+        range.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        // Force update toolbar state and reset command history tracking
+        updateToolbarState();
+        refreshHistoryState();
+      }, 50);
+    } else {
+      // Switching from WYSIWYG to code view
+      const htmlContent = editorElement.value.innerHTML || "";
+
+      // Save current state before switching
+      savedSelection.value =
+        currentSelection && currentSelection.rangeCount > 0
+          ? currentSelection.getRangeAt(0).cloneRange()
+          : null;
+
+      // Clear and set text content
+      editorElement.value.innerHTML = "";
+      editorElement.value.textContent = htmlContent;
+
+      isCodeView.value = true;
+
+      // Restore focus
+      setTimeout(() => {
+        if (!editorElement.value) return;
+
+        editorElement.value.focus();
+
+        // Place cursor at end of text
+        const textLength = (editorElement.value.textContent || "").length;
+        const range = document.createRange();
+        const selection = window.getSelection();
+
+        if (
+          editorElement.value.firstChild &&
+          editorElement.value.firstChild.nodeType === Node.TEXT_NODE
+        ) {
+          const textNode = editorElement.value.firstChild;
+          const maxOffset = Math.min(
+            textLength,
+            (textNode.textContent || "").length
+          );
+          range.setStart(textNode, maxOffset);
+          range.setEnd(textNode, maxOffset);
+        } else {
+          range.setStart(editorElement.value, 0);
+          range.setEnd(editorElement.value, 0);
+        }
+
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        updateToolbarState();
+        refreshHistoryState();
+      }, 50);
+    }
+  };
+
+  // Helper function to refresh history state
+  const refreshHistoryState = () => {
+    setTimeout(() => {
+      try {
+        canUndo.value = document.queryCommandEnabled("undo");
+        canRedo.value = document.queryCommandEnabled("redo");
+      } catch {
+        canUndo.value = false;
+        canRedo.value = false;
+      }
+    }, 100);
   };
 
   const showFloatingToolbar = () => {
@@ -133,13 +275,11 @@ export const useEditorStore = defineStore("editor", () => {
       showContextMenu.value = false;
       return;
     }
-
     const text = sel.toString().trim();
     if (!text) {
       showContextMenu.value = false;
       return;
     }
-
     const range = sel.getRangeAt(0);
     const rect = range.getBoundingClientRect();
     showContextMenu.value = true;
@@ -170,7 +310,6 @@ export const useEditorStore = defineStore("editor", () => {
     // Computed
     wordCount,
     characterCount,
-    isToolEnabled,
 
     // Actions
     setContent,
@@ -180,6 +319,8 @@ export const useEditorStore = defineStore("editor", () => {
     saveSelection,
     restoreSelection,
     toggleCodeView,
+    refreshHistoryState,
     showFloatingToolbar,
+    isToolEnabled,
   };
 });

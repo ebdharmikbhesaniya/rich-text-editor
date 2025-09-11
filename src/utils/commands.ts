@@ -1,49 +1,88 @@
-export const execCommand = (
-  command: string,
-  value: string | null = null
-): boolean => {
+import { useEditorStore } from "@/stores/editorStore";
+
+// FIXED: Enhanced execCommand with proper undo/redo handling
+export function execCommand(command: string, value: any = null): boolean {
+  const editorStore = useEditorStore();
+
+  // Allow undo/redo in both views
+  if (command === "undo" || command === "redo") {
+    try {
+      const success = document.execCommand(command, false, value);
+      console.log(`execCommand ${command}:`, success);
+
+      // Update content and state after undo/redo
+      setTimeout(() => {
+        editorStore.updateToolbarState();
+      }, 10);
+
+      return success;
+    } catch (e) {
+      console.warn("execCommand error:", e);
+      return false;
+    }
+  }
+
+  // For other commands, don't allow in code view
+  if (editorStore.isCodeView && !["undo", "redo"].includes(command))
+    return false;
+
   try {
+    // Ensure editor has focus for insertion commands
+    if (
+      editorStore.editorElement &&
+      (command === "insertHTML" || command === "insertText")
+    ) {
+      editorStore.editorElement.focus();
+    }
+
     const success = document.execCommand(command, false, value);
     console.log(`execCommand ${command}:`, success);
+
+    if (success) {
+      editorStore.updateToolbarState();
+    }
+
     return success;
   } catch (e) {
     console.warn("execCommand error:", e);
     return false;
   }
-};
+}
 
-export const isActive = (command: string): boolean => {
+export function isActive(command: string): boolean {
+  const editorStore = useEditorStore();
+  if (editorStore.isCodeView) return false;
   try {
     return document.queryCommandState(command);
   } catch {
     return false;
   }
-};
+}
 
-export const getSelectedText = (): string => {
+export function insertLink(): void {
+  const editorStore = useEditorStore();
   const selection = window.getSelection();
-  return selection ? selection.toString() : "";
-};
+  const selectedText = selection ? selection.toString() : "";
 
-export const insertLink = () => {
-  const selText = getSelectedText();
   const url = prompt("Enter URL", "https://");
   if (!url) return;
 
-  if (selText) {
+  if (selectedText) {
     execCommand("createLink", url);
   } else {
     const text = prompt("Link text", url) || url;
+    const escapedUrl = escapeHtmlAttr(url);
+    const escapedText = escapeHtml(text);
     execCommand(
       "insertHTML",
-      `<a href="${escapeHtmlAttr(
-        url
-      )}" target="_blank" rel="noopener noreferrer">${escapeHtml(text)}</a>`
+      `<a href="${escapedUrl}" target="_blank" rel="noopener noreferrer">${escapedText}</a>`
     );
   }
-};
 
-export const escapeHtml = (str: string): string => {
+  editorStore.updateToolbarState();
+}
+
+function escapeHtml(str: string): string {
   return String(str).replace(
     /[&<>"']/g,
     (s) =>
@@ -51,7 +90,8 @@ export const escapeHtml = (str: string): string => {
         s
       ] || s)
   );
-};
+}
 
-export const escapeHtmlAttr = (str: string): string =>
-  escapeHtml(str).replace(/"/g, "&quot;");
+function escapeHtmlAttr(str: string): string {
+  return escapeHtml(str).replace(/"/g, "&quot;");
+}
