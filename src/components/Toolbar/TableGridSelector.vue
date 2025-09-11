@@ -67,6 +67,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -82,201 +83,223 @@ const tableStore = useTableStore();
 const toolbarStore = useToolbarStore();
 const editorStore = useEditorStore();
 
-// FIXED: Handle dropdown toggle with proper selection saving
+// FIXED: Store the original cursor position when dropdown opens
+const originalCursorPosition = ref<Range | null>(null);
+
+// FIXED: Save cursor position BEFORE opening dropdown
 const handleDropdownToggle = (event: MouseEvent) => {
   event.preventDefault();
 
-  // Always ensure we have a valid cursor position before opening dropdown
-  ensureValidCursorPosition();
+  // Save the current cursor position in the editor
+  const selection = window.getSelection();
+  if (selection && selection.rangeCount > 0 && editorStore.editorElement) {
+    const range = selection.getRangeAt(0);
 
-  // Save selection after ensuring cursor is in editor
-  editorStore.saveSelection();
+    // Check if the selection is within the editor
+    const isInEditor =
+      editorStore.editorElement.contains(
+        range.commonAncestorContainer as Node
+      ) || editorStore.editorElement === range.commonAncestorContainer;
+
+    if (isInEditor) {
+      // Save the exact cursor position
+      originalCursorPosition.value = range.cloneRange();
+      console.log("Saved cursor position in editor");
+    } else {
+      // Cursor is outside editor, create position at end
+      originalCursorPosition.value = createEndPosition();
+      console.log("Cursor outside editor, created end position");
+    }
+  } else {
+    // No selection, create position at end of editor
+    originalCursorPosition.value = createEndPosition();
+    console.log("No selection, created end position");
+  }
+
+  // Open the dropdown
   toolbarStore.toggleDropdown("tableGrid");
 };
 
-// FIXED: Ensure cursor is in editor before table operations
-const ensureValidCursorPosition = () => {
-  if (!editorStore.editorElement) return;
+// FIXED: Create a position at the end of editor content
+const createEndPosition = (): Range | null => {
+  if (!editorStore.editorElement) return null;
 
-  const selection = window.getSelection();
-  const isInEditor =
-    selection &&
-    selection.rangeCount > 0 &&
-    editorStore.editorElement.contains(selection.anchorNode as Node);
+  const range = document.createRange();
 
-  if (!isInEditor) {
-    // Place cursor at the end of editor
-    editorStore.editorElement.focus();
+  if (editorStore.editorElement.childNodes.length > 0) {
+    const lastChild = editorStore.editorElement.lastChild!;
 
-    const range = document.createRange();
-
-    // Find the best place to put cursor
-    if (editorStore.editorElement.childNodes.length > 0) {
-      const lastChild = editorStore.editorElement.lastChild!;
-
-      if (lastChild.nodeType === Node.TEXT_NODE) {
-        range.setStart(lastChild, (lastChild.textContent || "").length);
-        range.setEnd(lastChild, (lastChild.textContent || "").length);
-      } else if (lastChild.nodeName === "P" || lastChild.nodeName === "DIV") {
-        // Place cursor at end of last paragraph/div
-        if (lastChild.childNodes.length > 0) {
-          const lastTextNode = lastChild.lastChild!;
-          if (lastTextNode.nodeType === Node.TEXT_NODE) {
-            range.setStart(
-              lastTextNode,
-              (lastTextNode.textContent || "").length
-            );
-            range.setEnd(lastTextNode, (lastTextNode.textContent || "").length);
-          } else {
-            range.setStartAfter(lastTextNode);
-            range.setEndAfter(lastTextNode);
-          }
+    if (lastChild.nodeType === Node.TEXT_NODE) {
+      range.setStart(lastChild, (lastChild.textContent || "").length);
+      range.setEnd(lastChild, (lastChild.textContent || "").length);
+    } else if (lastChild.nodeName === "P" || lastChild.nodeName === "DIV") {
+      // Place cursor at end of last paragraph/div
+      if (lastChild.childNodes.length > 0) {
+        const lastTextNode = lastChild.lastChild!;
+        if (lastTextNode.nodeType === Node.TEXT_NODE) {
+          range.setStart(lastTextNode, (lastTextNode.textContent || "").length);
+          range.setEnd(lastTextNode, (lastTextNode.textContent || "").length);
         } else {
-          range.setStart(lastChild, 0);
-          range.setEnd(lastChild, 0);
+          range.setStartAfter(lastTextNode);
+          range.setEndAfter(lastTextNode);
         }
       } else {
-        range.setStartAfter(lastChild);
-        range.setEndAfter(lastChild);
+        range.setStart(lastChild, 0);
+        range.setEnd(lastChild, 0);
       }
     } else {
-      // Editor is empty, create a paragraph
-      const p = document.createElement("p");
-      p.innerHTML = "<br>";
-      editorStore.editorElement.appendChild(p);
-      range.setStart(p, 0);
-      range.setEnd(p, 0);
+      range.setStartAfter(lastChild);
+      range.setEndAfter(lastChild);
     }
-
-    selection?.removeAllRanges();
-    selection?.addRange(range);
+  } else {
+    // Editor is empty, create a paragraph
+    const p = document.createElement("p");
+    p.innerHTML = "<br>";
+    editorStore.editorElement.appendChild(p);
+    range.setStart(p, 0);
+    range.setEnd(p, 0);
   }
+
+  return range;
 };
 
-// FIXED: Improved table creation with proper cursor management
+// FIXED: Use the saved cursor position for table insertion
 const createTableFromGrid = (rows: number, cols: number) => {
-  if (!rows || !cols) return;
+  if (
+    !rows ||
+    !cols ||
+    !originalCursorPosition.value ||
+    !editorStore.editorElement
+  )
+    return;
 
-  // Ensure we have a valid cursor position
-  ensureValidCursorPosition();
+  console.log("Inserting table at saved cursor position");
 
-  // Use maintainFocus to handle the entire operation
-  editorStore.maintainFocus(() => {
-    const columnWidth = Math.floor(100 / cols);
-    let html = `<table style="
-        border-collapse: collapse;
-        width: 100%;
-        table-layout: fixed;
-        margin: 1em 0;
-      ">`;
+  // Focus the editor first
+  editorStore.editorElement.focus();
 
-    html += "<colgroup>";
-    for (let c = 0; c < cols; c++) {
-      html += `<col style="width: ${columnWidth}%;">`;
-    }
-    html += "</colgroup>";
-
-    for (let r = 0; r < rows; r++) {
-      html += "<tr>";
-      const isFirstRow = r === 0;
-
-      for (let c = 0; c < cols; c++) {
-        if (isFirstRow) {
-          html += `<th style="
-              border: 1px solid #ccc;
-              padding: 8px;
-              word-wrap: break-word;
-              overflow-wrap: break-word;
-              vertical-align: top;
-              min-height: 20px;
-              background-color: ${tableStore.currentHeaderColor};
-              font-weight: bold;
-              text-align: center;
-            ">Header</th>`;
-        } else {
-          html += `<td style="
-              border: 1px solid #ccc;
-              padding: 8px;
-              word-wrap: break-word;
-              overflow-wrap: break-word;
-              vertical-align: top;
-              min-height: 20px;
-            ">&nbsp;</td>`;
-        }
-      }
-      html += "</tr>";
-    }
-
-    html += "</table><p></p>";
-
-    // Insert table using execCommand
-    const success = insertTableHTML(html);
-
-    if (!success) {
-      console.warn("Table insertion failed, trying fallback method");
-      insertTableFallback(html);
-    }
-  });
-
-  toolbarStore.closeAllDropdowns();
-};
-
-// FIXED: Better table HTML insertion
-const insertTableHTML = (html: string): boolean => {
-  try {
-    return document.execCommand("insertHTML", false, html);
-  } catch (error) {
-    console.warn("execCommand insertHTML failed:", error);
-    return false;
+  // Restore the original cursor position
+  const selection = window.getSelection();
+  if (selection) {
+    selection.removeAllRanges();
+    selection.addRange(originalCursorPosition.value);
   }
+
+  // Create table HTML
+  const columnWidth = Math.floor(100 / cols);
+  let html = `<table style="
+      border-collapse: collapse;
+      width: 100%;
+      table-layout: fixed;
+      margin: 1em 0;
+    ">`;
+
+  html += "<colgroup>";
+  for (let c = 0; c < cols; c++) {
+    html += `<col style="width: ${columnWidth}%;">`;
+  }
+  html += "</colgroup>";
+
+  for (let r = 0; r < rows; r++) {
+    html += "<tr>";
+    const isFirstRow = r === 0;
+
+    for (let c = 0; c < cols; c++) {
+      if (isFirstRow) {
+        html += `<th style="
+            border: 1px solid #ccc;
+            padding: 8px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            vertical-align: top;
+            min-height: 20px;
+            background-color: ${tableStore.currentHeaderColor};
+            font-weight: bold;
+            text-align: center;
+          ">Header</th>`;
+      } else {
+        html += `<td style="
+            border: 1px solid #ccc;
+            padding: 8px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            vertical-align: top;
+            min-height: 20px;
+          ">&nbsp;</td>`;
+      }
+    }
+    html += "</tr>";
+  }
+
+  html += "</table><p></p>";
+
+  // Insert the table at the restored cursor position
+  setTimeout(() => {
+    try {
+      const success = document.execCommand("insertHTML", false, html);
+      if (!success) {
+        console.warn("execCommand failed, trying fallback");
+        insertTableAtSavedPosition(html);
+      } else {
+        console.log("Table inserted successfully with execCommand");
+      }
+    } catch (error) {
+      console.error("execCommand error:", error);
+      insertTableAtSavedPosition(html);
+    }
+
+    // Update editor content and close dropdown
+    editorStore.updateToolbarState();
+    toolbarStore.closeAllDropdowns();
+
+    // Clear the saved position
+    originalCursorPosition.value = null;
+  }, 10);
 };
 
-// FIXED: Fallback table insertion method
-const insertTableFallback = (tableHTML: string) => {
-  if (!editorStore.editorElement) return;
+// FIXED: Fallback method using saved position
+const insertTableAtSavedPosition = (tableHTML: string) => {
+  if (!originalCursorPosition.value || !editorStore.editorElement) return;
 
   try {
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) {
-      // No selection, append to end
-      const temp = document.createElement("div");
-      temp.innerHTML = tableHTML;
-
-      while (temp.firstChild) {
-        editorStore.editorElement.appendChild(temp.firstChild);
-      }
-      return;
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(originalCursorPosition.value);
     }
 
-    const range = selection.getRangeAt(0);
     const temp = document.createElement("div");
     temp.innerHTML = tableHTML;
 
-    // Delete any selected content first
+    const range = originalCursorPosition.value.cloneRange();
     range.deleteContents();
 
-    // Insert each child node
     const nodes = Array.from(temp.childNodes);
     nodes.forEach((node) => {
       range.insertNode(node.cloneNode(true));
-      range.collapse(false); // Move cursor after inserted content
+      range.collapse(false);
     });
 
-    // Update selection
-    selection.removeAllRanges();
-    selection.addRange(range);
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    console.log("Table inserted using fallback method");
   } catch (error) {
-    console.error("Fallback table insertion failed:", error);
+    console.error("Fallback insertion failed:", error);
     // Last resort - append to end
     editorStore.editorElement.innerHTML += tableHTML;
   }
 };
 
-// FIXED: Custom table dialog with proper cursor management
+// FIXED: Custom table dialog using saved position
 const showCustomTableDialog = () => {
-  // Ensure cursor is in editor before showing dialog
-  ensureValidCursorPosition();
-  editorStore.saveSelection();
+  // Use the same saved cursor position
+  if (!originalCursorPosition.value) {
+    // If no saved position, create one
+    originalCursorPosition.value = createEndPosition();
+  }
 
   const rowsInput = prompt("Number of rows:", "3");
   if (rowsInput === null) return;
