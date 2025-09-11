@@ -213,7 +213,7 @@ export const useEditorStore = defineStore("editor", () => {
       editorElement.value.innerHTML = "";
 
       // Set the HTML content
-      editorElement.value.innerHTML = textContent || "<p></p>";
+      editorElement.value.innerHTML = textContent || "";
 
       isCodeView.value = false;
 
