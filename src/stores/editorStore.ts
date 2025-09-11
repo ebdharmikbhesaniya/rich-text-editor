@@ -1,6 +1,6 @@
+import type { ToolName } from "@/types";
 import { defineStore } from "pinia";
-import { ref, computed, nextTick } from "vue";
-import type { EditorState, ToolName } from "@/types";
+import { computed, nextTick, ref } from "vue";
 
 export const useEditorStore = defineStore("editor", () => {
   // State
@@ -51,6 +51,48 @@ export const useEditorStore = defineStore("editor", () => {
   };
 
   // FIXED: Improved toolbar state update with better redo detection
+  const executeCommand = (command: string, value: any = null) => {
+    if (!editorElement.value) return false;
+
+    // For undo/redo, allow in both modes
+    if (command === "undo" || command === "redo") {
+      try {
+        const success = document.execCommand(command, false, value);
+        setTimeout(() => updateToolbarState(), 10);
+        return success;
+      } catch (e) {
+        console.warn("Command error:", e);
+        return false;
+      }
+    }
+
+    // Don't allow other commands in code view
+    if (isCodeView.value) return false;
+
+    // Ensure editor has focus
+    if (document.activeElement !== editorElement.value) {
+      editorElement.value.focus();
+    }
+
+    // Small delay to ensure focus is established
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        try {
+          const success = document.execCommand(command, false, value);
+          console.log(`execCommand ${command}:`, success);
+
+          if (success) {
+            updateToolbarState();
+          }
+          resolve(success);
+        } catch (e) {
+          console.warn("Command error:", e);
+          resolve(false);
+        }
+      }, 10);
+    });
+  };
+
   const updateToolbarState = () => {
     nextTick(() => {
       try {
@@ -294,6 +336,54 @@ export const useEditorStore = defineStore("editor", () => {
     };
   };
 
+  const maintainFocus = (callback: () => void) => {
+    if (!editorElement.value) {
+      callback();
+      return;
+    }
+
+    // Save current selection
+    const selection = window.getSelection();
+    const savedRange =
+      selection && selection.rangeCount > 0
+        ? selection.getRangeAt(0).cloneRange()
+        : null;
+
+    // Ensure editor has focus
+    editorElement.value.focus();
+
+    // Execute callback after a small delay
+    setTimeout(() => {
+      callback();
+
+      // Restore selection if it was saved
+      if (savedRange && selection) {
+        setTimeout(() => {
+          try {
+            selection.removeAllRanges();
+            selection.addRange(savedRange);
+            editorElement.value?.focus();
+          } catch (e) {
+            // If range is invalid, just focus the editor
+            editorElement.value?.focus();
+          }
+        }, 5);
+      }
+    }, 5);
+  };
+
+  const ensureFocus = () => {
+    if (editorElement.value && document.activeElement !== editorElement.value) {
+      editorElement.value.focus();
+    }
+  };
+
+  const preventBlur = (event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    ensureFocus();
+  };
+
   return {
     // State
     content,
@@ -322,5 +412,9 @@ export const useEditorStore = defineStore("editor", () => {
     refreshHistoryState,
     showFloatingToolbar,
     isToolEnabled,
+    maintainFocus,
+    ensureFocus,
+    preventBlur,
+    executeCommand,
   };
 });

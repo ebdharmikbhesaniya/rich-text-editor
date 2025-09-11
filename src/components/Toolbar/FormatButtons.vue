@@ -5,7 +5,7 @@
       variant="ghost"
       size="sm"
       :class="{ 'bg-blue-100': isActive('bold') }"
-      @mousedown.prevent="execCommand('bold')"
+      @mousedown="(e: any) => handleFormatClick(e, 'bold')"
       title="Bold (Ctrl+B)">
       <Bold class="h-4 w-4" />
     </Button>
@@ -15,7 +15,7 @@
       variant="ghost"
       size="sm"
       :class="{ 'bg-blue-100': isActive('italic') }"
-      @mousedown.prevent="execCommand('italic')"
+      @mousedown="(e: any) => handleFormatClick(e, 'italic')"
       title="Italic (Ctrl+I)">
       <Italic class="h-4 w-4" />
     </Button>
@@ -25,7 +25,7 @@
       variant="ghost"
       size="sm"
       :class="{ 'bg-blue-100': isActive('underline') }"
-      @mousedown.prevent="execCommand('underline')"
+      @mousedown="(e: any) => handleFormatClick(e, 'underline')"
       title="Underline (Ctrl+U)">
       <Underline class="h-4 w-4" />
     </Button>
@@ -35,7 +35,7 @@
       variant="ghost"
       size="sm"
       :class="{ 'bg-blue-100': isActive('strikeThrough') }"
-      @mousedown.prevent="execCommand('strikeThrough')"
+      @mousedown="(e: any) => handleFormatClick(e, 'strikeThrough')"
       title="Strikethrough">
       <Strikethrough class="h-4 w-4" />
     </Button>
@@ -45,7 +45,7 @@
       variant="ghost"
       size="sm"
       :class="{ 'bg-blue-100': isActive('superscript') }"
-      @mousedown.prevent="execCommand('superscript')"
+      @mousedown="(e: any) => handleFormatClick(e, 'superscript')"
       title="Superscript">
       <Superscript class="h-4 w-4" />
     </Button>
@@ -55,7 +55,7 @@
       variant="ghost"
       size="sm"
       :class="{ 'bg-blue-100': isActive('subscript') }"
-      @mousedown.prevent="execCommand('subscript')"
+      @mousedown="(e: any) => handleFormatClick(e, 'subscript')"
       title="Subscript">
       <Subscript class="h-4 w-4" />
     </Button>
@@ -65,7 +65,7 @@
 <script setup lang="ts">
 import { Button } from "@/components/ui/button";
 import { useEditorStore } from "@/stores/editorStore";
-import { execCommand, isActive } from "@/utils/commands";
+import { isActive } from "@/utils/commands";
 import {
   Bold,
   Italic,
@@ -76,4 +76,17 @@ import {
 } from "lucide-vue-next";
 
 const editorStore = useEditorStore();
+
+// FIXED: Proper command execution without losing focus
+const handleFormatClick = (event: MouseEvent, command: string) => {
+  event.preventDefault();
+
+  // Save selection immediately
+  editorStore.saveSelection();
+
+  // Execute command with focus management
+  editorStore.maintainFocus(() => {
+    editorStore.executeCommand(command);
+  });
+};
 </script>
