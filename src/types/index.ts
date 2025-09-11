@@ -1,46 +1,32 @@
-// Common types for tools and editor
 export type ToolName =
   | "undo"
   | "redo"
+  | "heading"
   | "bold"
   | "italic"
   | "underline"
-  | "strikeThrough"
+  | "strikethrough"
   | "superscript"
   | "subscript"
-  | "foreColor"
+  | "fontColor"
   | "highlight"
-  | "heading"
   | "table"
-  | "insertUnorderedList"
-  | "insertOrderedList"
-  | "justifyLeft"
-  | "justifyCenter"
-  | "justifyRight"
-  | "justifyFull"
-  | "insertLink"
-  | "insertHorizontalRule"
+  | "link"
+  | "horizontalRule"
+  | "bulletList"
+  | "numberedList"
+  | "alignLeft"
+  | "alignCenter"
+  | "alignRight"
+  | "alignJustify"
   | "codeView";
 
-export interface ToolConfig {
-  name: ToolName;
-  icon?: string;
-  label?: string;
-  shortcut?: string;
-  group?: string;
-}
-
-export type ToolList = ToolName[];
-
-export interface HeadingOption {
-  label: string;
-  tag: string; // e.g. 'p', 'h1', 'h2', 'h3'
-  className?: string;
-}
-
-export interface ColorPalette {
-  colors: string[];
-  label?: string;
+export interface EditorProps {
+  modelValue?: string;
+  placeholder?: string;
+  tools?: ToolName[];
+  disabled?: boolean;
+  readonly?: boolean;
 }
 
 export interface EditorState {
@@ -49,26 +35,30 @@ export interface EditorState {
   isCodeView: boolean;
   canUndo: boolean;
   canRedo: boolean;
+  wordCount: number;
+  characterCount: number;
+  showContextMenu: boolean;
+  contextMenuStyle: Record<string, string>;
+}
+
+export interface ToolbarState {
   currentHeading: string;
   currentTextColor: string;
   currentHighlightColor: string;
-  currentTableHeaderColor: string;
+  dropdowns: Record<string, boolean>;
+}
+
+export interface TableState {
   isInTableCell: boolean;
+  currentHeaderColor: string;
+  maxGridRows: number;
+  maxGridCols: number;
+  hoveredRows: number;
+  hoveredCols: number;
 }
 
-export interface DropdownState {
-  heading: boolean;
-  color: boolean;
-  highlight: boolean;
-  tableHeaderColor: boolean;
-  tableGrid: boolean;
-}
-
-export interface GridConfig {
-  minSize: { rows: number; cols: number };
-  maxSize: { rows: number; cols: number };
-  expandThreshold: number;
-  shrinkThreshold: number;
-  expandStep: number;
-  shrinkStep: number;
+export interface ColorPalette {
+  colors: string[];
+  highlightColors: string[];
+  headerColors: string[];
 }
