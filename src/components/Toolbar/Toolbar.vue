@@ -56,6 +56,8 @@ const showHistoryButtons = computed(
 );
 
 const showSeparator = (section: string) => {
+  console.log("section -->", section);
+
   // Logic to determine when to show separators between toolbar sections
   return true; // Simplified for now
 };
