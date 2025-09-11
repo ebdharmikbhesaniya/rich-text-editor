@@ -1,7 +1,11 @@
 <template>
   <DropdownMenu v-model:open="toolbarStore.dropdowns.tableGrid">
     <DropdownMenuTrigger as-child>
-      <Button variant="ghost" size="sm" title="Insert Table">
+      <Button
+        variant="ghost"
+        size="sm"
+        title="Insert Table"
+        @mousedown="(e: any) => handleDropdownToggle(e)">
         <TableIcon class="h-4 w-4" />
         <ChevronDown class="h-3 w-3 ml-1" />
       </Button>
@@ -78,104 +82,200 @@ const tableStore = useTableStore();
 const toolbarStore = useToolbarStore();
 const editorStore = useEditorStore();
 
-const createTableFromGrid = (rows: number, cols: number) => {
-  if (!rows || !cols) return;
+// FIXED: Handle dropdown toggle with proper selection saving
+const handleDropdownToggle = (event: MouseEvent) => {
+  event.preventDefault();
 
-  editorStore.restoreSelection();
+  // Always ensure we have a valid cursor position before opening dropdown
+  ensureValidCursorPosition();
 
-  const columnWidth = Math.floor(100 / cols);
-  let html = `<table style="
-      border-collapse: collapse;
-      width: 100%;
-      table-layout: fixed;
-      margin: 1em 0;
-    ">`;
-
-  html += "<colgroup>";
-  for (let c = 0; c < cols; c++) {
-    html += `<col style="width: ${columnWidth}%;">`;
-  }
-  html += "</colgroup>";
-
-  for (let r = 0; r < rows; r++) {
-    html += "<tr>";
-    const isFirstRow = r === 0;
-
-    for (let c = 0; c < cols; c++) {
-      if (isFirstRow) {
-        html += `<th style="
-            border: 1px solid #ccc;
-            padding: 8px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            vertical-align: top;
-            min-height: 20px;
-            background-color: ${tableStore.currentHeaderColor};
-            font-weight: bold;
-            text-align: center;
-          ">Header</th>`;
-      } else {
-        html += `<td style="
-            border: 1px solid #ccc;
-            padding: 8px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            vertical-align: top;
-            min-height: 20px;
-          ">&nbsp;</td>`;
-      }
-    }
-    html += "</tr>";
-  }
-
-  html += "</table><p></p>";
-
-  try {
-    const success = document.execCommand("insertHTML", false, html);
-    if (!success && editorStore.savedSelection) {
-      insertTableAtSelection(html);
-    }
-  } catch (error) {
-    if (editorStore.savedSelection) {
-      insertTableAtSelection(html);
-    }
-  }
-
-  toolbarStore.closeAllDropdowns();
-  editorStore.savedSelection = null;
+  // Save selection after ensuring cursor is in editor
+  editorStore.saveSelection();
+  toolbarStore.toggleDropdown("tableGrid");
 };
 
-const insertTableAtSelection = (tableHTML: string) => {
-  if (!editorStore.savedSelection || !editorStore.editorElement) return;
+// FIXED: Ensure cursor is in editor before table operations
+const ensureValidCursorPosition = () => {
+  if (!editorStore.editorElement) return;
 
-  try {
+  const selection = window.getSelection();
+  const isInEditor =
+    selection &&
+    selection.rangeCount > 0 &&
+    editorStore.editorElement.contains(selection.anchorNode as Node);
+
+  if (!isInEditor) {
+    // Place cursor at the end of editor
     editorStore.editorElement.focus();
-    const selection = window.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(editorStore.savedSelection);
 
-    const temp = document.createElement("div");
-    temp.innerHTML = tableHTML;
+    const range = document.createRange();
 
-    const range = editorStore.savedSelection.cloneRange();
-    range.deleteContents();
+    // Find the best place to put cursor
+    if (editorStore.editorElement.childNodes.length > 0) {
+      const lastChild = editorStore.editorElement.lastChild!;
 
-    const nodes = Array.from(temp.childNodes);
-    nodes.forEach((node) => {
-      range.insertNode(node.cloneNode(true));
-      range.collapse(false);
-    });
+      if (lastChild.nodeType === Node.TEXT_NODE) {
+        range.setStart(lastChild, (lastChild.textContent || "").length);
+        range.setEnd(lastChild, (lastChild.textContent || "").length);
+      } else if (lastChild.nodeName === "P" || lastChild.nodeName === "DIV") {
+        // Place cursor at end of last paragraph/div
+        if (lastChild.childNodes.length > 0) {
+          const lastTextNode = lastChild.lastChild!;
+          if (lastTextNode.nodeType === Node.TEXT_NODE) {
+            range.setStart(
+              lastTextNode,
+              (lastTextNode.textContent || "").length
+            );
+            range.setEnd(lastTextNode, (lastTextNode.textContent || "").length);
+          } else {
+            range.setStartAfter(lastTextNode);
+            range.setEndAfter(lastTextNode);
+          }
+        } else {
+          range.setStart(lastChild, 0);
+          range.setEnd(lastChild, 0);
+        }
+      } else {
+        range.setStartAfter(lastChild);
+        range.setEndAfter(lastChild);
+      }
+    } else {
+      // Editor is empty, create a paragraph
+      const p = document.createElement("p");
+      p.innerHTML = "<br>";
+      editorStore.editorElement.appendChild(p);
+      range.setStart(p, 0);
+      range.setEnd(p, 0);
+    }
 
     selection?.removeAllRanges();
     selection?.addRange(range);
-  } catch (error) {
-    if (editorStore.editorElement) {
-      editorStore.editorElement.innerHTML += tableHTML;
-    }
   }
 };
 
+// FIXED: Improved table creation with proper cursor management
+const createTableFromGrid = (rows: number, cols: number) => {
+  if (!rows || !cols) return;
+
+  // Ensure we have a valid cursor position
+  ensureValidCursorPosition();
+
+  // Use maintainFocus to handle the entire operation
+  editorStore.maintainFocus(() => {
+    const columnWidth = Math.floor(100 / cols);
+    let html = `<table style="
+        border-collapse: collapse;
+        width: 100%;
+        table-layout: fixed;
+        margin: 1em 0;
+      ">`;
+
+    html += "<colgroup>";
+    for (let c = 0; c < cols; c++) {
+      html += `<col style="width: ${columnWidth}%;">`;
+    }
+    html += "</colgroup>";
+
+    for (let r = 0; r < rows; r++) {
+      html += "<tr>";
+      const isFirstRow = r === 0;
+
+      for (let c = 0; c < cols; c++) {
+        if (isFirstRow) {
+          html += `<th style="
+              border: 1px solid #ccc;
+              padding: 8px;
+              word-wrap: break-word;
+              overflow-wrap: break-word;
+              vertical-align: top;
+              min-height: 20px;
+              background-color: ${tableStore.currentHeaderColor};
+              font-weight: bold;
+              text-align: center;
+            ">Header</th>`;
+        } else {
+          html += `<td style="
+              border: 1px solid #ccc;
+              padding: 8px;
+              word-wrap: break-word;
+              overflow-wrap: break-word;
+              vertical-align: top;
+              min-height: 20px;
+            ">&nbsp;</td>`;
+        }
+      }
+      html += "</tr>";
+    }
+
+    html += "</table><p></p>";
+
+    // Insert table using execCommand
+    const success = insertTableHTML(html);
+
+    if (!success) {
+      console.warn("Table insertion failed, trying fallback method");
+      insertTableFallback(html);
+    }
+  });
+
+  toolbarStore.closeAllDropdowns();
+};
+
+// FIXED: Better table HTML insertion
+const insertTableHTML = (html: string): boolean => {
+  try {
+    return document.execCommand("insertHTML", false, html);
+  } catch (error) {
+    console.warn("execCommand insertHTML failed:", error);
+    return false;
+  }
+};
+
+// FIXED: Fallback table insertion method
+const insertTableFallback = (tableHTML: string) => {
+  if (!editorStore.editorElement) return;
+
+  try {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      // No selection, append to end
+      const temp = document.createElement("div");
+      temp.innerHTML = tableHTML;
+
+      while (temp.firstChild) {
+        editorStore.editorElement.appendChild(temp.firstChild);
+      }
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const temp = document.createElement("div");
+    temp.innerHTML = tableHTML;
+
+    // Delete any selected content first
+    range.deleteContents();
+
+    // Insert each child node
+    const nodes = Array.from(temp.childNodes);
+    nodes.forEach((node) => {
+      range.insertNode(node.cloneNode(true));
+      range.collapse(false); // Move cursor after inserted content
+    });
+
+    // Update selection
+    selection.removeAllRanges();
+    selection.addRange(range);
+  } catch (error) {
+    console.error("Fallback table insertion failed:", error);
+    // Last resort - append to end
+    editorStore.editorElement.innerHTML += tableHTML;
+  }
+};
+
+// FIXED: Custom table dialog with proper cursor management
 const showCustomTableDialog = () => {
+  // Ensure cursor is in editor before showing dialog
+  ensureValidCursorPosition();
   editorStore.saveSelection();
 
   const rowsInput = prompt("Number of rows:", "3");
