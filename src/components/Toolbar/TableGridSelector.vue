@@ -35,7 +35,7 @@
             <div
               v-for="col in tableStore.maxGridCols"
               :key="`cell-${row}-${col}`"
-              class="grid-cell w-4 h-3 border border-gray-300 bg-white cursor-pointer transition-all duration-150 rounded-sm"
+              class="grid-cell w-4 h-3 border border-gray-300 bg-white cursor-pointer transition-all duration-150"
               :class="{
                 'bg-blue-200 border-blue-500':
                   row <= tableStore.hoveredRows &&
