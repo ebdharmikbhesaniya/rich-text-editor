@@ -80,10 +80,10 @@ export function insertLink(): void {
     .replace(/\s+/g, " ")
     .trim();
 
-  const hoverStyle = `
-    color: #1d4ed8;
-    text-decoration-color: #1d4ed8;
-  `;
+  // const hoverStyle = `
+  //   color: #1d4ed8;
+  //   text-decoration-color: #1d4ed8;
+  // `;
 
   if (selectedText) {
     // Create link from selected text
