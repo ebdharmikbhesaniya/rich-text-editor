@@ -61,6 +61,7 @@ const props = withDefaults(defineProps<Props>(), {
       "alignRight",
       "alignJustify",
       "codeView",
+      "taskList",
     ] as ToolName[],
   disabled: false,
   readonly: false,
