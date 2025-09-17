@@ -31,8 +31,12 @@
     <AlignmentButtons />
 
     <div v-if="showSeparator('align')" class="toolbar-separator" />
-
+    
     <ViewToggle v-if="editorStore.isToolEnabled('codeView')" />
+
+    <div v-if="showSeparator('align')" class="toolbar-separator" />
+
+    <CodeBlock/>
   </div>
 </template>
 
@@ -50,6 +54,7 @@ import InsertTools from "./InsertTools.vue";
 import ListButtons from "./ListButtons.vue";
 import TableTools from "./TableTools.vue";
 import ViewToggle from "./ViewToggle.vue";
+import CodeBlock from "./CodeBlock.vue";
 
 const editorStore = useEditorStore();
 const tableStore = useTableStore();
