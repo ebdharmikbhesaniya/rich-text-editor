@@ -37,6 +37,11 @@
     <div v-if="showSeparator('align')" class="toolbar-separator" />
 
     <CodeBlock/>
+
+    <div v-if="showSeparator('align')" class="toolbar-separator" />
+
+    <BlockquoteButton />
+
   </div>
 </template>
 
@@ -55,6 +60,7 @@ import ListButtons from "./ListButtons.vue";
 import TableTools from "./TableTools.vue";
 import ViewToggle from "./ViewToggle.vue";
 import CodeBlock from "./CodeBlock.vue";
+import BlockquoteButton from "./BlockquoteButton.vue";
 
 const editorStore = useEditorStore();
 const tableStore = useTableStore();
