@@ -15,6 +15,7 @@ export type ToolName =
   | "horizontalRule"
   | "bulletList"
   | "numberedList"
+  | "taskList"
   | "alignLeft"
   | "alignCenter"
   | "alignRight"

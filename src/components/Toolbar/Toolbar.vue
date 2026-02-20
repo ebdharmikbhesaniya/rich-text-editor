@@ -15,7 +15,8 @@
 
     <ColorPicker v-if="editorStore.isToolEnabled('fontColor')" />
     <HighlightPicker v-if="editorStore.isToolEnabled('highlight')" />
-    <TableTools v-if="editorStore.isToolEnabled('table')" />
+    <TableTools
+      v-if="editorStore.isToolEnabled('table') && tableStore.isInTableCell" />
 
     <div v-if="showSeparator('color')" class="toolbar-separator" />
 
@@ -30,12 +31,22 @@
     <AlignmentButtons />
 
     <div v-if="showSeparator('align')" class="toolbar-separator" />
-
+    
     <ViewToggle v-if="editorStore.isToolEnabled('codeView')" />
+
+    <div v-if="showSeparator('align')" class="toolbar-separator" />
+
+    <CodeBlock/>
+
+    <div v-if="showSeparator('align')" class="toolbar-separator" />
+
+    <BlockquoteButton />
+
   </div>
 </template>
 
 <script setup lang="ts">
+import { useTableStore } from "@/stores";
 import { useEditorStore } from "@/stores/editorStore";
 import { computed } from "vue";
 import AlignmentButtons from "./AlignmentButtons.vue";
@@ -48,14 +59,19 @@ import InsertTools from "./InsertTools.vue";
 import ListButtons from "./ListButtons.vue";
 import TableTools from "./TableTools.vue";
 import ViewToggle from "./ViewToggle.vue";
+import CodeBlock from "./CodeBlock.vue";
+import BlockquoteButton from "./BlockquoteButton.vue";
 
 const editorStore = useEditorStore();
+const tableStore = useTableStore();
 
 const showHistoryButtons = computed(
   () => editorStore.isToolEnabled("undo") || editorStore.isToolEnabled("redo")
 );
 
 const showSeparator = (section: string) => {
+  console.log("section -->", section);
+
   // Logic to determine when to show separators between toolbar sections
   return true; // Simplified for now
 };

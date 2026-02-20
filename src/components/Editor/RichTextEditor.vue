@@ -36,7 +36,7 @@ interface Props extends EditorProps {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  modelValue: "",
+  modelValue: "test <b>what is this</b><p></p>",
   placeholder: "Start typing here...",
   tools: () =>
     [
@@ -61,6 +61,7 @@ const props = withDefaults(defineProps<Props>(), {
       "alignRight",
       "alignJustify",
       "codeView",
+      "taskList",
     ] as ToolName[],
   disabled: false,
   readonly: false,
@@ -81,6 +82,7 @@ const editorStore = useEditorStore();
 const showToolbar = computed(() => props.showToolbar && props.tools.length > 0);
 
 onMounted(() => {
+  // editorStore.setContent(props.modelValue)
   editorStore.setEnabledTools(props.tools);
   document.addEventListener("click", handleClickOutside);
 });

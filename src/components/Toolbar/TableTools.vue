@@ -3,7 +3,11 @@
     v-show="tableStore.isInTableCell"
     v-model:open="toolbarStore.dropdowns.tableHeaderColor">
     <DropdownMenuTrigger as-child>
-      <Button variant="ghost" size="sm" title="Table Options">
+      <Button
+        variant="ghost"
+        size="sm"
+        title="Table Options"
+        @mousedown="(e: any) => handleDropdownToggle(e)">
         <Table class="h-4 w-4" />
         <ChevronDown class="h-3 w-3 ml-1" />
       </Button>
@@ -123,6 +127,87 @@ const tableStore = useTableStore();
 const toolbarStore = useToolbarStore();
 const editorStore = useEditorStore();
 
+// FIXED: Handle dropdown toggle with focus management
+const handleDropdownToggle = (event: MouseEvent) => {
+  event.preventDefault();
+  editorStore.saveSelection();
+  toolbarStore.toggleDropdown("tableHeaderColor");
+};
+
+// FIXED: Apply proper table styles and layout
+const applyTableStyles = (table: HTMLTableElement) => {
+  // Set table-layout to fixed for consistent column widths
+  table.style.cssText = `
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+  `;
+
+  // Style all cells for consistent appearance
+  const cells = table.querySelectorAll("th, td");
+  cells.forEach((cell) => {
+    const htmlCell = cell as HTMLElement;
+    const isHeader = cell.tagName === "TH";
+
+    if (isHeader) {
+      htmlCell.style.cssText = `
+        border: 1px solid #ccc;
+        padding: 8px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        vertical-align: top;
+        min-height: 20px;
+        max-width: 1px;
+        background-color: ${tableStore.currentHeaderColor};
+        font-weight: bold;
+        text-align: center;
+        overflow: hidden;
+      `;
+    } else {
+      htmlCell.style.cssText = `
+        border: 1px solid #ccc;
+        padding: 8px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        vertical-align: top;
+        min-height: 20px;
+        max-width: 1px;
+        overflow: hidden;
+      `;
+    }
+  });
+};
+
+// FIXED: Update colgroup for equal column widths
+const updateColgroup = (table: HTMLTableElement) => {
+  const firstRow = table.querySelector("tr");
+  if (!firstRow) return;
+
+  const columnCount = firstRow.children.length;
+  const columnWidth = Math.floor(100 / columnCount);
+
+  // Remove existing colgroup
+  const existingColgroup = table.querySelector("colgroup");
+  if (existingColgroup) {
+    existingColgroup.remove();
+  }
+
+  // Create new colgroup
+  const colgroup = document.createElement("colgroup");
+  for (let i = 0; i < columnCount; i++) {
+    const col = document.createElement("col");
+    col.style.width = `${columnWidth}%`;
+    colgroup.appendChild(col);
+  }
+
+  // Insert colgroup as first child
+  table.insertBefore(colgroup, table.firstChild);
+};
+
+// FIXED: Improved row insertion with proper styling
 const insertTableRow = (position: "above" | "below" = "below") => {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return;
@@ -135,6 +220,7 @@ const insertTableRow = (position: "above" | "below" = "below") => {
   while (node && node !== editorStore.editorElement) {
     if ((node as Element).tagName === "TR") {
       const currentRow = node as HTMLTableRowElement;
+      const table = currentRow.closest("table") as HTMLTableElement;
       const cellCount = currentRow.children.length;
       const newRow = document.createElement("tr");
 
@@ -144,29 +230,11 @@ const insertTableRow = (position: "above" | "below" = "below") => {
         const cell = document.createElement(isHeader ? "th" : "td");
 
         if (isHeader) {
-          cell.style.cssText = `
-              border: 1px solid #ccc;
-              padding: 8px;
-              word-wrap: break-word;
-              overflow-wrap: break-word;
-              vertical-align: top;
-              min-height: 20px;
-              background-color: ${tableStore.currentHeaderColor};
-              font-weight: bold;
-              text-align: center;
-            `;
           cell.innerHTML = "Header";
         } else {
-          cell.style.cssText = `
-              border: 1px solid #ccc;
-              padding: 8px;
-              word-wrap: break-word;
-              overflow-wrap: break-word;
-              vertical-align: top;
-              min-height: 20px;
-            `;
           cell.innerHTML = "&nbsp;";
         }
+
         newRow.appendChild(cell);
       }
 
@@ -181,6 +249,9 @@ const insertTableRow = (position: "above" | "below" = "below") => {
         }
       }
 
+      // Apply proper styles after insertion
+      applyTableStyles(table);
+
       toolbarStore.closeAllDropdowns();
       break;
     }
@@ -188,33 +259,7 @@ const insertTableRow = (position: "above" | "below" = "below") => {
   }
 };
 
-const deleteTableRow = () => {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return;
-
-  let node = sel.anchorNode;
-  if (node?.nodeType === Node.TEXT_NODE) {
-    node = node.parentElement;
-  }
-
-  while (node && node !== editorStore.editorElement) {
-    if ((node as Element).tagName === "TR") {
-      const currentRow = node as HTMLTableRowElement;
-      const tbody = currentRow.parentNode!;
-
-      if (tbody.children.length <= 1) {
-        alert("Cannot delete the last row");
-        return;
-      }
-
-      currentRow.remove();
-      toolbarStore.closeAllDropdowns();
-      break;
-    }
-    node = (node as Element).parentElement;
-  }
-};
-
+// FIXED: Improved column insertion with proper layout management
 const insertTableColumn = (position: "left" | "right" = "right") => {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return;
@@ -229,7 +274,7 @@ const insertTableColumn = (position: "left" | "right" = "right") => {
       (node as Element).tagName === "TD" ||
       (node as Element).tagName === "TH"
     ) {
-      const table = (node as Element).closest("table")!;
+      const table = (node as Element).closest("table") as HTMLTableElement;
       const currentCell = node as HTMLElement;
       const currentRow = currentCell.parentNode as HTMLElement;
 
@@ -245,27 +290,8 @@ const insertTableColumn = (position: "left" | "right" = "right") => {
         const newCell = document.createElement(isFirstRow ? "th" : "td");
 
         if (isFirstRow) {
-          newCell.style.cssText = `
-              border: 1px solid #ccc;
-              padding: 8px;
-              word-wrap: break-word;
-              overflow-wrap: break-word;
-              vertical-align: top;
-              min-height: 20px;
-              background-color: ${tableStore.currentHeaderColor};
-              font-weight: bold;
-              text-align: center;
-            `;
           newCell.innerHTML = "Header";
         } else {
-          newCell.style.cssText = `
-              border: 1px solid #ccc;
-              padding: 8px;
-              word-wrap: break-word;
-              overflow-wrap: break-word;
-              vertical-align: top;
-              min-height: 20px;
-            `;
           newCell.innerHTML = "&nbsp;";
         }
 
@@ -276,6 +302,10 @@ const insertTableColumn = (position: "left" | "right" = "right") => {
         }
       });
 
+      // FIXED: Update table layout after column insertion
+      updateColgroup(table);
+      applyTableStyles(table);
+
       toolbarStore.closeAllDropdowns();
       break;
     }
@@ -283,6 +313,7 @@ const insertTableColumn = (position: "left" | "right" = "right") => {
   }
 };
 
+// FIXED: Improved column deletion with layout updates
 const deleteTableColumn = () => {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return;
@@ -297,7 +328,7 @@ const deleteTableColumn = () => {
       (node as Element).tagName === "TD" ||
       (node as Element).tagName === "TH"
     ) {
-      const table = (node as Element).closest("table")!;
+      const table = (node as Element).closest("table") as HTMLTableElement;
       const currentCell = node as HTMLElement;
       const currentRow = currentCell.parentNode as HTMLElement;
 
@@ -318,6 +349,10 @@ const deleteTableColumn = () => {
         }
       });
 
+      // FIXED: Update table layout after column deletion
+      updateColgroup(table);
+      applyTableStyles(table);
+
       toolbarStore.closeAllDropdowns();
       break;
     }
@@ -325,6 +360,40 @@ const deleteTableColumn = () => {
   }
 };
 
+// FIXED: Improved row deletion
+const deleteTableRow = () => {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+
+  let node = sel.anchorNode;
+  if (node?.nodeType === Node.TEXT_NODE) {
+    node = node.parentElement;
+  }
+
+  while (node && node !== editorStore.editorElement) {
+    if ((node as Element).tagName === "TR") {
+      const currentRow = node as HTMLTableRowElement;
+      const table = currentRow.closest("table") as HTMLTableElement;
+      const tbody = currentRow.parentNode!;
+
+      if (tbody.children.length <= 1) {
+        alert("Cannot delete the last row");
+        return;
+      }
+
+      currentRow.remove();
+
+      // Reapply styles to maintain consistency
+      applyTableStyles(table);
+
+      toolbarStore.closeAllDropdowns();
+      break;
+    }
+    node = (node as Element).parentElement;
+  }
+};
+
+// Color and header toggle functions remain the same
 const changeTableHeaderColor = (color: string) => {
   tableStore.currentHeaderColor = color;
 
@@ -365,6 +434,7 @@ const toggleTableHeader = () => {
       (node as Element).tagName === "TD"
     ) {
       const currentElement = node as HTMLElement;
+      const table = currentElement.closest("table") as HTMLTableElement;
       const isHeader = currentElement.tagName === "TH";
       const newTagName = isHeader ? "TD" : "TH";
 
@@ -391,6 +461,9 @@ const toggleTableHeader = () => {
       range.selectNodeContents(newElement);
       sel.removeAllRanges();
       sel.addRange(range);
+
+      // Reapply table styles
+      applyTableStyles(table);
 
       break;
     }
